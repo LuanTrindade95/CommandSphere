@@ -1,4 +1,46 @@
 {
+  "admin": {
+    "ingestions": {
+      "badge": "Operations",
+      "description": "Inspect ingestion runs, status, structured stats, and logs.",
+      "emptyDescription": "No ingestion run has been registered for accessible communities.",
+      "emptyTitle": "No runs",
+      "runId": "Run #{{id}}",
+      "title": "Ingestions"
+    },
+    "plugins": {
+      "badge": "Admin",
+      "branchLabel": "Default branch",
+      "communityLabel": "Community",
+      "create": "Create plugin",
+      "description": "Register GitHub sources and trigger manual syncs when needed.",
+      "descriptionLabel": "Description",
+      "docsPathLabel": "Documentation path",
+      "emptyDescription": "Create this community's first plugin.",
+      "emptyTitle": "No plugins",
+      "forbiddenDescription": "Your session has no plugins.manage permission in any community.",
+      "forbiddenTitle": "Permission required",
+      "nameLabel": "Name",
+      "repoLabel": "GitHub repository",
+      "slugLabel": "Slug",
+      "sync": "Sync",
+      "title": "Plugins"
+    }
+  },
+  "analytics": {
+    "badge": "Analytics",
+    "communityLabel": "Community",
+    "description": "Ranking of most viewed commands inside the selected period.",
+    "emptyDescription": "No views were registered for this period yet.",
+    "emptyTitle": "No data",
+    "forbiddenDescription": "Your session has no analytics.view permission in available communities.",
+    "forbiddenTitle": "Permission required",
+    "period7": "7 days",
+    "period30": "30 days",
+    "period90": "90 days",
+    "periodLabel": "Period",
+    "title": "Most viewed commands"
+  },
   "app": {
     "name": "CommandSphere"
   },
@@ -12,6 +54,52 @@
     "login": "Sign in",
     "logout": "Sign out",
     "title": "Workspace access"
+  },
+  "catalog": {
+    "badge": "Catalog",
+    "descriptionFallback": "Plugins, versions, and documentation for this community.",
+    "emptyDescription": "No plugin matches the current filters.",
+    "emptyTitle": "No plugins found",
+    "errorDescription": "The API did not return this community catalog.",
+    "errorTitle": "Could not load catalog",
+    "noDescription": "No description registered.",
+    "searchLabel": "Filter plugins",
+    "searchPlaceholder": "Search by name, slug, or description",
+    "titleFallback": "Community",
+    "versionCount": "{{count}} versions"
+  },
+  "command": {
+    "aliasesEmpty": "No aliases registered.",
+    "aliasesTitle": "Aliases",
+    "errorDescription": "Could not load the requested command.",
+    "errorTitle": "Command unavailable",
+    "noDescription": "No description registered.",
+    "parametersEmpty": "No structured parameters registered.",
+    "parametersTitle": "Parameters",
+    "unknownPlugin": "Plugin",
+    "views": "{{count}} views"
+  },
+  "docs": {
+    "backToCatalog": "Back to catalog",
+    "documentsTitle": "Documents",
+    "errorDescription": "Could not load this plugin documentation.",
+    "errorTitle": "Documentation unavailable",
+    "indexTitle": "Index",
+    "noDescription": "No description registered.",
+    "noDocumentDescription": "The selected version has no ingested documents yet.",
+    "noDocumentTitle": "No document",
+    "versionLabel": "Version"
+  },
+  "favorites": {
+    "add": "Favorite",
+    "badge": "Favorites",
+    "description": "Commands and documents saved for quick access.",
+    "emptyDescription": "Favorite commands or documents to build your personal panel.",
+    "emptyTitle": "Nothing favorited",
+    "remove": "Remove",
+    "title": "Favorites",
+    "unavailableTitle": "Item unavailable",
+    "unknownPlugin": "Plugin"
   },
   "home": {
     "badge": "Frontend foundation",
@@ -48,9 +136,32 @@
     "resultCount": "{{count}} estimated results",
     "unknownPlugin": "Plugin"
   },
+  "search": {
+    "badge": "Search",
+    "emptyDescription": "Adjust the term or remove filters to expand results.",
+    "emptyTitle": "No commands found",
+    "facets": {
+      "category": "Category",
+      "community": "Community",
+      "plugin": "Plugin"
+    },
+    "loading": "Searching commands...",
+    "noFacets": "No facets",
+    "queryLabel": "Term",
+    "queryPlaceholder": "Search by command, syntax, or description",
+    "resultCount": "{{count}} estimated results",
+    "title": "Global search",
+    "unknownPlugin": "Plugin"
+  },
   "shell": {
-    "foundation": "SSR Foundation",
+    "foundation": "SSR Workspace",
     "languageLabel": "Language",
+    "nav": {
+      "admin": "Admin",
+      "analytics": "Analytics",
+      "favorites": "Favorites",
+      "search": "Search"
+    },
     "noCommunity": "No community loaded",
     "searchAria": "Open global search",
     "searchPlaceholder": "Search CommandSphere",

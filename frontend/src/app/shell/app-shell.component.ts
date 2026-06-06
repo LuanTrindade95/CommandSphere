@@ -80,13 +80,24 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
               @for (community of auth.communities(); track community.slug) {
                 <a
                   class="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"
-                  routerLink="/"
-                  [queryParams]="{ community: community.slug }"
+                  [routerLink]="['/c', community.slug]"
                 >
                   <app-ui-icon name="shield" [size]="14" />
                   {{ community.name }}
                 </a>
               }
+              <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/search">
+                {{ 'shell.nav.search' | transloco }}
+              </a>
+              <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/favorites">
+                {{ 'shell.nav.favorites' | transloco }}
+              </a>
+              <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/analytics">
+                {{ 'shell.nav.analytics' | transloco }}
+              </a>
+              <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/admin/plugins">
+                {{ 'shell.nav.admin' | transloco }}
+              </a>
             } @else {
               <span class="inline-flex h-9 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-neutral-gray">
                 {{ 'shell.noCommunity' | transloco }}
