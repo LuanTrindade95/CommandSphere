@@ -100,3 +100,36 @@ Adicionar `/api/v1/auth/dev-login`, habilitado somente quando `APP_ENV` é `loca
 
 ### Consequências
 O pipeline consegue testar autenticação real de API com Sanctum sem integração externa. O trade-off é manter disciplina para nunca habilitar a rota em produção; a checagem de ambiente é coberta por teste de integração.
+
+## ADR-09 — Convenção explícita para extração de comandos Markdown
+
+### Contexto
+O CommandSphere precisa ingerir documentação real sem transformar todo documento em fonte ambígua de comandos. A visão define duas formas aceitas: frontmatter `commands:` ou blocos com heading `## /<comando>` e metadados (`syntax`, `aliases`, `params`). Documentos fora da convenção ainda são conteúdo válido e não podem ser descartados silenciosamente.
+
+### Decisão
+Implementar o parser com `league/commonmark` para HTML e `symfony/yaml` para frontmatter/metadados. Um documento gera `Document` sempre que puder ser lido; comandos só são extraídos quando declaram `syntax` pela convenção suportada. Documentos sem comandos válidos ou com metadados incompletos adicionam warning ao `IngestionRun`.
+
+### Consequências
+A extração fica previsível, testável com fixtures Markdown reais e extensível sem heurísticas frágeis. O custo é exigir disciplina nos repositórios de plugins: documentação fora da convenção aparece no viewer, mas não vira comando pesquisável até ser corrigida.
+
+## ADR-10 — Idempotência por chave natural e reconciliação no re-sync
+
+### Contexto
+Reprocessar o mesmo repositório não pode duplicar documentos ou comandos. Além disso, quando um comando some da documentação, manter o registro antigo criaria busca e analytics inconsistentes.
+
+### Decisão
+Persistir documentos por `plugin_version_id + path` e comandos por `plugin_version_id + slug` usando upsert. A cada documento processado, o pipeline reconcilia os comandos daquele documento e remove os slugs que não apareceram no parse atual. O serviço evita sincronização Scout durante ingestão para não indexar dados antes da fase de busca.
+
+### Consequências
+O re-sync passa a ser seguro e repetível, com teste funcional cobrindo duas execuções iguais e remoção de comando ausente. A reconciliação depende de slugs estáveis; renomear slug intencionalmente é tratado como remoção do comando antigo e criação de um novo.
+
+## ADR-11 — ETag e requisições condicionais na GitHub API
+
+### Contexto
+O pipeline consulta repositórios GitHub e pode rodar manualmente, por webhook ou agendamento. Baixar conteúdo inalterado aumenta latência e pressiona rate limit, especialmente em plugins com muitos documentos.
+
+### Decisão
+O `GitHubClient` HTTP lista arquivos `.md` por árvore recursiva e busca o conteúdo via Contents API. Para cada arquivo, salva o ETag em cache e envia `If-None-Match` nos próximos syncs. Respostas `304` são tratadas como conteúdo inalterado; `403` e `404` viram erros de domínio claros no `IngestionRun`.
+
+### Consequências
+Execuções repetidas reduzem tráfego e risco de rate limit sem depender de estado persistente extra. Testes usam `FixtureGitHubClient` local para não depender da rede; o comportamento de rate limit é validado com fake que falha antes de mutar dados.
