@@ -2,6 +2,8 @@
 
 use App\Contracts\GitHubClient;
 use App\Data\GitHubMarkdownFile;
+use App\Events\CommandIndexUpdated;
+use App\Events\IngestionRunStatusChanged;
 use App\Exceptions\GitHubRateLimitException;
 use App\Models\Command;
 use App\Models\Community;
@@ -12,8 +14,16 @@ use App\Services\GitHub\FixtureGitHubClient;
 use App\Services\Ingestion\IngestionService;
 use App\Services\Markdown\MarkdownParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    Event::fake([
+        CommandIndexUpdated::class,
+        IngestionRunStatusChanged::class,
+    ]);
+});
 
 function ingestionFixturePath(string $fixture): string
 {

@@ -5,6 +5,8 @@ namespace App\Services\Ingestion;
 use App\Contracts\GitHubClient;
 use App\Data\ParsedCommand;
 use App\Data\ParsedDocument;
+use App\Events\CommandIndexUpdated;
+use App\Events\IngestionRunStatusChanged;
 use App\Exceptions\GitHubRateLimitException;
 use App\Exceptions\GitHubRepositoryNotFoundException;
 use App\Models\Category;
@@ -28,7 +30,7 @@ class IngestionService
 
     public function start(PluginVersion $pluginVersion): IngestionRun
     {
-        return IngestionRun::query()->create([
+        $run = IngestionRun::query()->create([
             'plugin_version_id' => $pluginVersion->id,
             'status' => 'queued',
             'stats' => [
@@ -38,6 +40,10 @@ class IngestionService
             ],
             'log' => [],
         ]);
+
+        IngestionRunStatusChanged::dispatch($run);
+
+        return $run;
     }
 
     public function run(PluginVersion $pluginVersion, ?IngestionRun $run = null): IngestionRun
@@ -49,6 +55,7 @@ class IngestionService
             'started_at' => now(),
             'finished_at' => null,
         ]);
+        IngestionRunStatusChanged::dispatch($run->refresh());
 
         $stats = [
             'docs_parsed' => 0,
@@ -116,10 +123,19 @@ class IngestionService
         ]);
 
         if ($stats['docs_parsed'] > 0) {
+            $pluginVersion->commands()->with(['category', 'pluginVersion.plugin.community'])->get()->searchable();
             $this->cache->invalidate();
+            $community = $pluginVersion->plugin?->community;
+
+            if ($community !== null) {
+                CommandIndexUpdated::dispatch($community);
+            }
         }
 
-        return $run->refresh();
+        $run = $run->refresh();
+        IngestionRunStatusChanged::dispatch($run);
+
+        return $run;
     }
 
     /**
@@ -202,6 +218,9 @@ class IngestionService
             'finished_at' => now(),
         ]);
 
-        return $run->refresh();
+        $run = $run->refresh();
+        IngestionRunStatusChanged::dispatch($run);
+
+        return $run;
     }
 }

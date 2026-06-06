@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\DevLoginController;
 use App\Http\Controllers\Api\V1\Auth\DiscordAuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\FavoriteController;
+use App\Http\Controllers\Api\V1\GitHubWebhookController;
 use App\Http\Controllers\Api\V1\IngestionController;
 use App\Http\Controllers\Api\V1\PluginSyncController;
 use App\Http\Controllers\Api\V1\SearchController;
@@ -15,6 +16,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/auth/discord/redirect', [DiscordAuthController::class, 'redirect']);
     Route::get('/auth/discord/callback', [DiscordAuthController::class, 'callback']);
     Route::post('/auth/dev-login', DevLoginController::class);
+    Route::post('/webhooks/github', GitHubWebhookController::class);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthenticatedUserController::class, 'show']);

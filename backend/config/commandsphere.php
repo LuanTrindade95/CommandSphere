@@ -7,6 +7,11 @@ return [
         'client' => env('COMMANDSPHERE_GITHUB_CLIENT', 'http'),
         'fixture_path' => env('COMMANDSPHERE_GITHUB_FIXTURE_PATH'),
         'token' => env('GITHUB_TOKEN'),
+        'webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+    ],
+
+    'sync' => [
+        'schedule' => env('COMMANDSPHERE_SYNC_SCHEDULE', '*/30 * * * *'),
     ],
 
     'analytics' => [

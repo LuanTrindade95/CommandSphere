@@ -60,6 +60,9 @@ class IngestionController extends Controller
      */
     private function payload(IngestionRun $run): array
     {
+        $plugin = $run->pluginVersion?->plugin;
+        $community = $plugin?->community;
+
         return [
             'id' => $run->id,
             'plugin_version_id' => $run->plugin_version_id,
@@ -68,6 +71,16 @@ class IngestionController extends Controller
             'log' => $run->log,
             'started_at' => $run->started_at?->toISOString(),
             'finished_at' => $run->finished_at?->toISOString(),
+            'plugin' => $plugin === null ? null : [
+                'id' => $plugin->id,
+                'name' => $plugin->name,
+                'slug' => $plugin->slug,
+            ],
+            'community' => $community === null ? null : [
+                'id' => $community->id,
+                'name' => $community->name,
+                'slug' => $community->slug,
+            ],
         ];
     }
 }
