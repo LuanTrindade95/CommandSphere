@@ -4,7 +4,7 @@ WORKDIR /var/www/html
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev \
-    && docker-php-ext-install pcntl pdo_mysql zip \
+    && docker-php-ext-install bcmath pcntl pdo_mysql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
