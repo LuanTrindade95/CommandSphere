@@ -1,0 +1,174 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\CommandResource;
+use App\Http\Resources\CommunityResource;
+use App\Http\Resources\DocumentResource;
+use App\Http\Resources\PluginResource;
+use App\Models\Community;
+use App\Models\Document;
+use App\Models\Plugin;
+use App\Models\PluginVersion;
+use App\Models\User;
+use App\Services\Discovery\DiscoveryAccess;
+use App\Services\Discovery\DiscoveryCache;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class CatalogController extends Controller
+{
+    public function __construct(
+        private readonly DiscoveryAccess $access,
+        private readonly DiscoveryCache $cache,
+    ) {}
+
+    public function communities(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'communities:index',
+                fn (): array => CommunityResource::collection(
+                    $this->access->communities($user)->orderBy('name')->get(),
+                )->resolve($request),
+            ),
+        ]);
+    }
+
+    public function community(Request $request, Community $community): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $this->access->ensureCommunity($user, $community);
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'communities:'.$community->slug,
+                fn (): array => (new CommunityResource($community))->resolve($request),
+            ),
+        ]);
+    }
+
+    public function plugins(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $community = $request->query('community');
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'plugins:index:community='.(is_string($community) ? $community : 'all'),
+                fn (): array => PluginResource::collection(
+                    $this->access->plugins($user)
+                        ->with(['community', 'versions' => fn ($query) => $query->latest('published_at')])
+                        ->when(is_string($community) && $community !== '', fn (Builder $query): Builder => $query
+                            ->whereHas('community', fn (Builder $communityQuery): Builder => $communityQuery->where('slug', $community)))
+                        ->orderBy('name')
+                        ->get(),
+                )->resolve($request),
+            ),
+        ]);
+    }
+
+    public function plugin(Request $request, string $slug): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $plugin = $this->pluginBySlug($request, $user, $slug)
+            ->with(['community', 'versions' => fn ($query) => $query->latest('published_at')])
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'plugins:'.$plugin->community_id.':'.$plugin->slug,
+                fn (): array => (new PluginResource($plugin))->resolve($request),
+            ),
+        ]);
+    }
+
+    public function versionDocuments(Request $request, string $slug, string $version): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $plugin = $this->pluginBySlug($request, $user, $slug)->firstOrFail();
+        $pluginVersion = PluginVersion::query()
+            ->where('plugin_id', $plugin->id)
+            ->where('version', $version)
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'plugins:'.$plugin->community_id.':'.$plugin->slug.':versions:'.$version.':documents',
+                fn (): array => DocumentResource::collection(
+                    Document::query()
+                        ->with('pluginVersion')
+                        ->where('plugin_version_id', $pluginVersion->id)
+                        ->orderBy('sort_order')
+                        ->orderBy('path')
+                        ->get(),
+                )->resolve($request),
+            ),
+        ]);
+    }
+
+    public function document(Request $request, Document $document): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $document = $this->access->documents($user)
+            ->with('pluginVersion.plugin.community')
+            ->whereKey($document->id)
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'documents:'.$document->id,
+                fn (): array => (new DocumentResource($document))->resolve($request),
+            ),
+        ]);
+    }
+
+    public function command(Request $request, string $slug): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $command = $this->access->commands($user)
+            ->with(['category', 'pluginVersion.plugin.community'])
+            ->withCount('views')
+            ->where('slug', $slug)
+            ->latest('id')
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $this->cache->remember(
+                $user,
+                'commands:'.$command->plugin_version_id.':'.$command->slug,
+                fn (): array => (new CommandResource($command))->resolve($request),
+            ),
+        ]);
+    }
+
+    /**
+     * @return Builder<Plugin>
+     */
+    private function pluginBySlug(Request $request, User $user, string $slug): Builder
+    {
+        $community = $request->query('community');
+
+        return $this->access->plugins($user)
+            ->where('slug', $slug)
+            ->when(is_string($community) && $community !== '', fn (Builder $query): Builder => $query
+                ->whereHas('community', fn (Builder $communityQuery): Builder => $communityQuery->where('slug', $community)));
+    }
+}
