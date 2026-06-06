@@ -11,3 +11,7 @@
 | Fase 4B — Frontend: Catálogo, Doc Viewer & Busca | ⏳ Pendente | — |
 | Fase 5 — Sincronização Automática + Realtime | ⏳ Pendente | — |
 | Fase 6 — Polish & Vitrine | ⏳ Pendente | — |
+
+## Correções complementares
+
+- Fase 3C / bloqueador da Fase 4B: contrato Discovery completado em `143fc47` com `POST /api/v1/plugins`, facet/filtro `community` em `/api/v1/search`, testes funcionais Pest e smoke HTTP/Meilisearch.

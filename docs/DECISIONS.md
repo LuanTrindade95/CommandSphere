@@ -167,6 +167,9 @@ Registrar `CommandView` no endpoint `/api/v1/commands/{slug}/view`, mas ignorar 
 ### Consequências
 Os rankings ficam menos suscetíveis a inflação acidental e a regra é coberta por teste funcional. O trade-off é que sessões legítimas repetidas dentro da janela curta contam como uma única view.
 
+### Nota de contrato — Discovery API para telas de domínio
+Durante o pré-check da Fase 4B, o contrato previsto para telas de domínio foi completado sem nova decisão arquitetural: `POST /api/v1/plugins` cria plugins sem disparar sync automático e exige `plugins.manage` no escopo da comunidade; `/api/v1/search` passa a aceitar filtro `community` por slug ou id e retorna facet `community` junto de `plugin` e `category`, preservando o filtro obrigatório de comunidades acessíveis ao usuário.
+
 ## ADR-15 — Token bearer em memória no frontend
 
 ### Contexto
