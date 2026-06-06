@@ -133,3 +133,36 @@ O `GitHubClient` HTTP lista arquivos `.md` por árvore recursiva e busca o conte
 
 ### Consequências
 Execuções repetidas reduzem tráfego e risco de rate limit sem depender de estado persistente extra. Testes usam `FixtureGitHubClient` local para não depender da rede; o comportamento de rate limit é validado com fake que falha antes de mutar dados.
+
+## ADR-12 — Scout e Meilisearch para descoberta de comandos
+
+### Contexto
+A busca do CommandSphere precisa responder rápido para uso com debounce no frontend, suportar typo-tolerance e retornar facets por plugin/categoria. Também precisa impedir que resultados de comunidades fora do escopo do usuário apareçam.
+
+### Decisão
+Indexar `Command` via Laravel Scout/Meilisearch com payload enxuto e campos de filtro estáveis: `community`, `plugin`, `category` e `plugin_version`. O campo `views` é ordenável para ranking futuro. O endpoint `/api/v1/search` sempre adiciona filtro de comunidades acessíveis ao usuário e permite filtros adicionais por community/plugin/category.
+
+### Consequências
+A busca usa o motor correto para typo-tolerance e facets sem varrer MySQL por request. A contrapartida é manter settings do índice sincronizados (`scout:sync-index-settings`) e provar a presença real de documentos no Meilisearch nos smokes.
+
+## ADR-13 — Cache de leitura invalidado por versão na ingestão
+
+### Contexto
+Catálogo de comunidades, plugins, versões e documentos é leitura frequente e muda principalmente após ingestões. Invalidar item a item aumenta acoplamento entre pipeline e endpoints.
+
+### Decisão
+Usar cache Redis por chave com versão global de descoberta. As respostas de catálogo incluem a versão atual na chave e o `IngestionService` incrementa a versão quando documentos foram persistidos. Isso invalida as leituras antigas sem precisar listar todas as chaves.
+
+### Consequências
+O cache permanece simples, previsível e barato. Leituras antigas expiram naturalmente, enquanto novas requisições passam a usar a versão atual logo após uma ingestão com mudanças. O trade-off é invalidar todo o catálogo de leitura em vez de uma única chave específica.
+
+## ADR-14 — Deduplicação de views por janela curta
+
+### Contexto
+Analytics de comandos mais vistos pode ser inflado por refresh, duplo clique ou navegação repetida no mesmo comando em poucos segundos. O MVP precisa de uma regra simples e auditável antes de realtime/agendamentos.
+
+### Decisão
+Registrar `CommandView` no endpoint `/api/v1/commands/{slug}/view`, mas ignorar nova view do mesmo usuário para o mesmo comando dentro da janela configurada por `COMMANDSPHERE_VIEW_DEDUPE_MINUTES` (10 minutos por padrão). Quando uma view é gravada, o comando é reenviado ao Scout para atualizar o campo `views`.
+
+### Consequências
+Os rankings ficam menos suscetíveis a inflação acidental e a regra é coberta por teste funcional. O trade-off é que sessões legítimas repetidas dentro da janela curta contam como uma única view.
