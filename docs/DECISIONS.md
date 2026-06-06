@@ -166,3 +166,36 @@ Registrar `CommandView` no endpoint `/api/v1/commands/{slug}/view`, mas ignorar 
 
 ### Consequências
 Os rankings ficam menos suscetíveis a inflação acidental e a regra é coberta por teste funcional. O trade-off é que sessões legítimas repetidas dentro da janela curta contam como uma única view.
+
+## ADR-15 — Token bearer em memória no frontend
+
+### Contexto
+O frontend Angular SSR precisa consumir a API Sanctum sem persistir credenciais em superfícies que aumentem exposição a XSS. Também não pode depender de cookies de sessão server-side nesta fase, pois o backend emite bearer tokens para SPA/SSR.
+
+### Decisão
+Manter o token Sanctum apenas em memória dentro do `AuthService` por signals. O login Discord ou dev-login popula o estado no browser, `/auth/me` hidrata usuário/comunidades/permissões, e refresh de página exige novo login. Não usamos `localStorage`, `sessionStorage` nem serialização do token no `TransferState`.
+
+### Consequências
+A estratégia reduz persistência indevida de segredo e evita vazamento no HTML SSR. O custo é uma UX menos persistente até uma decisão futura sobre cookie httpOnly/BFF ou renovação segura de sessão.
+
+## ADR-16 — SSR sem vazamento de estado por request
+
+### Contexto
+O shell SSR renderiza conteúdo público e convive com auth client-side. Serviços singleton globais ou caches compartilhados poderiam contaminar uma request com dados de outra, especialmente quando o Node SSR atende usuários diferentes.
+
+### Decisão
+Usar providers Angular por request no SSR padrão (`bootstrapApplication` com `BootstrapContext`) e manter estado de usuário apenas em serviços injetáveis da aplicação, sem variáveis de módulo para sessão. `TransferState` é usado somente para dados públicos do shell; token, usuário e permissões nunca são transferidos para o HTML.
+
+### Consequências
+Duas requests SSR com identificadores diferentes geram HTML público equivalente e sem dados de usuário. Dados autenticados entram só após login no browser, via API bearer. O trade-off é que SSR não pré-renderiza conteúdo personalizado nesta fase.
+
+## ADR-17 — Estado frontend com Angular Signals, sem NgRx
+
+### Contexto
+A Fase 4A precisa de estado local para auth, loading, toasts, idioma e command palette. O domínio ainda não exige workflows complexos, normalização pesada ou time travel debugging.
+
+### Decisão
+Usar Angular Signals em serviços focados (`AuthService`, `LoadingService`, `ToastService`, `CommandPaletteService`) e rotas lazy standalone. NgRx não é adotado nesta fase; permissões continuam centralizadas no `AuthService` para evitar duplicação em guards e componentes.
+
+### Consequências
+O estado fica simples, tipado e compatível com SSR/hydration sem adicionar store global prematuro. Se fases futuras introduzirem cache complexo, colaboração realtime ou múltiplas fontes concorrentes de estado, a decisão pode ser revisitada com uma necessidade concreta.
