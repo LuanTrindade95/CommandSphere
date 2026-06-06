@@ -3,7 +3,7 @@
 | Fase | Status | Evidência |
 |---|---|---|
 | Fase 1 — Fundação (scaffold do monorepo) | ✓ Concluída | `9045e88` backend · `f8eb667` frontend · `87aebf3`, `fa0a242`, `57a2c89` Docker · `700e1c0` CI · `12ef725` README · validações locais/Docker verdes |
-| Fase 2 — Domínio e Dados | ⏳ Pendente | — |
+| Fase 2 — Domínio e Dados | ✓ Concluída | `a7c8f78` DTO package · `88c2453` migrations · `96ff1f5` models/DTOs/Scout · `55d6452` seeders/factories/permissões · validações MySQL Docker verdes |
 | Fase 3A — Backend: Auth Discord + Permissões | ⏳ Pendente | — |
 | Fase 3B — Backend: Pipeline de Ingestão & Parser | ⏳ Pendente | — |
 | Fase 3C — Backend: Busca, Catálogo, Favoritos & Analytics | ⏳ Pendente | — |

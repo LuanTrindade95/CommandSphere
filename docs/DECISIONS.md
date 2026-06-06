@@ -56,3 +56,25 @@ Remover Karma/Jasmine do frontend e configurar Jest com `jest-preset-angular`. F
 
 ### Consequências
 Os testes rodam de forma rápida e consistente no CI. A versão do preset precisou ser fixada para evitar conflito com Jest 30, cujo peer dependency não encaixa com o builder Angular 19 usado nesta fase.
+
+## ADR-05 — Chaves naturais para idempotência de documentos e comandos
+
+### Contexto
+O pipeline de ingestão futuro precisará reprocessar documentação Markdown sem criar duplicatas a cada execução. As entidades extraídas do repositório têm identificadores naturais no escopo correto: documento por caminho dentro de uma versão de plugin e comando por slug dentro de uma versão de plugin.
+
+### Decisão
+Modelar unicidade em `documents(plugin_version_id, path)` e `commands(plugin_version_id, slug)`. Plugins também usam `plugins(community_id, slug)` para permitir o mesmo slug em comunidades distintas sem conflito global.
+
+### Consequências
+As próximas fases poderão fazer upsert idempotente durante ingestão, reduzindo lógica compensatória e risco de duplicidade. A escolha exige que o parser preserve paths e slugs estáveis; alterações intencionais nesses identificadores serão tratadas como novos registros ou exigirão reconciliação explícita no pipeline.
+
+## ADR-06 — Permissões escopadas por comunidade
+
+### Contexto
+CommandSphere é multi-community: o mesmo usuário pode administrar uma comunidade e ser apenas membro em outra. Permissões globais não representam esse isolamento e criariam risco de vazamento de autorização entre comunidades.
+
+### Decisão
+Habilitar o modo teams do `spatie/laravel-permission` usando `community_id` como chave de escopo. O pivot `community_user` mantém o papel de domínio visível (`community-admin`, `maintainer`, `member`), enquanto roles e permissions do Spatie fazem a autorização efetiva. O helper `User::hasCommunityPermission()` troca temporariamente o escopo antes da checagem.
+
+### Consequências
+A autorização fica preparada para multi-tenancy por comunidade sem inventar um sistema paralelo. O custo é disciplina para sempre definir o escopo antes de atribuir ou checar roles, especialmente em jobs e fluxos assíncronos futuros.
