@@ -17,6 +17,7 @@ import { CommandPaletteService } from './command-palette.service';
 const EMPTY_SEARCH_RESPONSE: SearchResponse = {
   data: [],
   facets: {
+    community: {},
     plugin: {},
     category: {},
   },
@@ -208,7 +209,7 @@ export class CommandPaletteComponent {
 
   openResult(command: CommandResult): void {
     this.close();
-    void this.router.navigate(['/'], { queryParams: { command: command.slug } });
+    void this.router.navigate(['/commands', command.slug]);
   }
 
   private moveSelection(direction: 1 | -1): void {
