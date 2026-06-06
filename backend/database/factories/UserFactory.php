@@ -28,6 +28,8 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'discord_id' => fake()->unique()->numerify('9###############'),
+            'username' => fake()->unique()->userName(),
+            'avatar' => fake()->imageUrl(128, 128),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

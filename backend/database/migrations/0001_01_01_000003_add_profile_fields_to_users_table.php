@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table): void {
             $table->string('discord_id')->nullable()->unique()->after('email');
+            $table->string('username')->nullable()->after('discord_id');
+            $table->string('avatar')->nullable()->after('username');
         });
     }
 
@@ -23,7 +25,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table): void {
             $table->dropUnique(['discord_id']);
-            $table->dropColumn('discord_id');
+            $table->dropColumn(['discord_id', 'username', 'avatar']);
         });
     }
 };
