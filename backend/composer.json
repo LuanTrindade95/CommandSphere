@@ -17,6 +17,7 @@
         "laravel/tinker": "^2.10.1",
         "league/commonmark": "^2.8",
         "meilisearch/meilisearch-php": "^1.16",
+        "spatie/laravel-data": "^4.23",
         "spatie/laravel-permission": "6.*"
     },
     "require-dev": {
