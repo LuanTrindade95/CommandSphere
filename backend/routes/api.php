@@ -25,6 +25,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/communities', [CatalogController::class, 'communities']);
         Route::get('/communities/{community:slug}', [CatalogController::class, 'community']);
         Route::get('/plugins', [CatalogController::class, 'plugins']);
+        Route::post('/plugins', [CatalogController::class, 'store']);
         Route::get('/plugins/{slug}', [CatalogController::class, 'plugin']);
         Route::get('/plugins/{slug}/versions/{version}/documents', [CatalogController::class, 'versionDocuments']);
         Route::get('/documents/{document}', [CatalogController::class, 'document']);

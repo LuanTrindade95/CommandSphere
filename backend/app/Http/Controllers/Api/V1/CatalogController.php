@@ -17,6 +17,8 @@ use App\Services\Discovery\DiscoveryCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class CatalogController extends Controller
 {
@@ -76,6 +78,50 @@ class CatalogController extends Controller
                 )->resolve($request),
             ),
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'community_id' => ['required', 'integer', 'exists:communities,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'alpha_dash',
+                Rule::unique('plugins', 'slug')
+                    ->where(fn ($query) => $query->where('community_id', $request->integer('community_id'))),
+            ],
+            'description' => ['nullable', 'string'],
+            'github_repo' => ['required', 'string', 'max:255'],
+            'docs_path' => ['required', 'string', 'max:255'],
+            'default_branch' => ['required', 'string', 'max:255'],
+        ]);
+
+        $community = Community::query()->whereKey($data['community_id'])->firstOrFail();
+        $this->access->ensureCommunity($user, $community);
+
+        Gate::authorize('manage', [Plugin::class, $community]);
+
+        $plugin = Plugin::query()->create([
+            'community_id' => $community->id,
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'description' => $data['description'] ?? null,
+            'repository_url' => $data['github_repo'],
+            'documentation_path' => $data['docs_path'],
+            'default_branch' => $data['default_branch'],
+        ]);
+
+        $this->cache->invalidate();
+
+        return response()->json([
+            'data' => (new PluginResource($plugin->load(['community', 'versions'])))->resolve($request),
+        ], 201);
     }
 
     public function plugin(Request $request, string $slug): JsonResponse

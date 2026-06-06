@@ -206,6 +206,74 @@ it('indexes commands in meilisearch through scout import', function (): void {
     expect(importDiscoveryCommands(4))->toBeGreaterThanOrEqual(4);
 });
 
+it('creates plugins for users with plugins manage permission', function (): void {
+    $graph = discoveryGraph();
+    $token = $graph['user']->createToken('plugin-create-test')->plainTextToken;
+
+    $response = $this
+        ->withToken($token)
+        ->postJson('/api/v1/plugins', [
+            'community_id' => $graph['community']->id,
+            'name' => 'Arena Rules',
+            'slug' => 'arena-rules',
+            'description' => 'Command docs for arena moderation workflows.',
+            'github_repo' => 'commandsphere/arena-rules',
+            'docs_path' => 'docs',
+            'default_branch' => 'main',
+        ]);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('data.slug', 'arena-rules')
+        ->assertJsonPath('data.community.slug', 'celem-ecosystem')
+        ->assertJsonPath('data.repository_url', 'commandsphere/arena-rules')
+        ->assertJsonPath('data.documentation_path', 'docs');
+
+    $this->assertDatabaseHas('plugins', [
+        'community_id' => $graph['community']->id,
+        'slug' => 'arena-rules',
+        'repository_url' => 'commandsphere/arena-rules',
+        'documentation_path' => 'docs',
+        'default_branch' => 'main',
+    ]);
+});
+
+it('rejects plugin creation without plugins manage permission', function (): void {
+    $graph = discoveryGraph();
+    $member = User::factory()->create(['email' => 'member-create@example.test']);
+    assignDiscoveryRole($member, $graph['community'], 'member');
+    $token = $member->createToken('plugin-create-test')->plainTextToken;
+
+    $this
+        ->withToken($token)
+        ->postJson('/api/v1/plugins', [
+            'community_id' => $graph['community']->id,
+            'name' => 'Arena Rules',
+            'slug' => 'arena-rules',
+            'github_repo' => 'commandsphere/arena-rules',
+            'docs_path' => 'docs',
+            'default_branch' => 'main',
+        ])
+        ->assertForbidden()
+        ->assertJsonPath('code', 'authorization.denied');
+});
+
+it('validates plugin creation payloads', function (): void {
+    $graph = discoveryGraph();
+    $token = $graph['user']->createToken('plugin-create-test')->plainTextToken;
+
+    $this
+        ->withToken($token)
+        ->postJson('/api/v1/plugins', [
+            'community_id' => $graph['community']->id,
+            'name' => '',
+            'slug' => 'not allowed',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'validation.failed')
+        ->assertJsonValidationErrors(['name', 'slug', 'github_repo', 'docs_path', 'default_branch']);
+});
+
 it('searches commands with facets and plugin filters', function (): void {
     $graph = discoveryGraph();
     importDiscoveryCommands(4);
@@ -219,6 +287,7 @@ it('searches commands with facets and plugin filters', function (): void {
     $response
         ->assertOk()
         ->assertJsonPath('data.0.slug', 'ban-player')
+        ->assertJsonPath('facets.community.celem-ecosystem', 3)
         ->assertJsonPath('facets.plugin.celem-core', 2)
         ->assertJsonPath('facets.category.moderation', 2);
 
@@ -228,6 +297,37 @@ it('searches commands with facets and plugin filters', function (): void {
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.slug', 'inspect-balance');
+});
+
+it('filters search results by community and returns community facets', function (): void {
+    $graph = discoveryGraph();
+    assignDiscoveryRole($graph['user'], $graph['other_community'], 'community-admin');
+    importDiscoveryCommands(4);
+
+    $token = $graph['user']->createToken('search-test')->plainTextToken;
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/search?q=ban')
+        ->assertOk()
+        ->assertJsonPath('facets.community.celem-ecosystem', 1)
+        ->assertJsonPath('facets.community.forge-operations', 1);
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/search?q=ban&community=celem-ecosystem')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.slug', 'ban-player')
+        ->assertJsonMissingPath('facets.community.forge-operations');
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/search?q=ban&community='.$graph['other_community']->id)
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.slug', 'secret-ban')
+        ->assertJsonPath('facets.community.forge-operations', 1);
 });
 
 it('does not expose commands from communities outside the user scope', function (): void {
@@ -240,7 +340,8 @@ it('does not expose commands from communities outside the user scope', function 
         ->withToken($token)
         ->getJson('/api/v1/search?q=secret')
         ->assertOk()
-        ->assertJsonCount(0, 'data');
+        ->assertJsonCount(0, 'data')
+        ->assertJsonMissingPath('facets.community.forge-operations');
 });
 
 it('creates lists and removes polymorphic favorites', function (): void {

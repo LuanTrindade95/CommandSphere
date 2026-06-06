@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CommandResource;
 use App\Models\Command;
+use App\Models\Community;
 use App\Models\User;
 use App\Services\Discovery\DiscoveryAccess;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,7 @@ class SearchController extends Controller
         $raw = Command::search($term)
             ->options([
                 'filter' => $filters,
-                'facets' => ['plugin', 'category'],
+                'facets' => ['community', 'plugin', 'category'],
                 'limit' => 10,
                 'attributesToRetrieve' => ['id'],
             ])
@@ -47,6 +48,7 @@ class SearchController extends Controller
         return response()->json([
             'data' => CommandResource::collection($commands)->resolve($request),
             'facets' => [
+                'community' => Arr::get($raw, 'facetDistribution.community', []),
                 'plugin' => Arr::get($raw, 'facetDistribution.plugin', []),
                 'category' => Arr::get($raw, 'facetDistribution.category', []),
             ],
@@ -72,7 +74,13 @@ class SearchController extends Controller
                 ->implode(', ').']',
         ];
 
-        foreach (['community', 'plugin', 'category'] as $filter) {
+        $community = $request->query('community');
+
+        if (is_string($community) && $community !== '') {
+            $filters[] = 'community = '.$this->quote($this->communitySlug($community));
+        }
+
+        foreach (['plugin', 'category'] as $filter) {
             $value = $request->query($filter);
 
             if (is_string($value) && $value !== '') {
@@ -81,6 +89,19 @@ class SearchController extends Controller
         }
 
         return $filters;
+    }
+
+    private function communitySlug(string $value): string
+    {
+        if (ctype_digit($value)) {
+            $community = Community::query()->find((int) $value);
+
+            if ($community instanceof Community) {
+                return $community->slug;
+            }
+        }
+
+        return $value;
     }
 
     private function quote(string $value): string
