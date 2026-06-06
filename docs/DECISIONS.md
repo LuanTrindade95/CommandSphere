@@ -224,3 +224,36 @@ Representar `q`, `community`, `plugin` e `category` em query params e centraliza
 
 ### Consequências
 Resultados e filtros ficam reproduzíveis por URL, compatíveis com SSR/hydration e mais fáceis de testar. O custo é disciplina para toda nova facet passar pelo mesmo serviço, evitando estado paralelo em componentes.
+
+## ADR-20 — Webhook GitHub com verificação HMAC
+
+### Contexto
+A ingestão precisa reagir a pushes no repositório de documentação sem depender apenas de polling. Um endpoint público de webhook não pode aceitar payloads sem autenticação, porque isso permitiria disparo arbitrário de jobs de ingestão.
+
+### Decisão
+Expor `POST /api/v1/webhooks/github` e validar `X-Hub-Signature-256` com HMAC SHA-256 usando `GITHUB_WEBHOOK_SECRET`. Apenas eventos `push` na branch configurada do plugin disparam ingestão da versão latest correspondente. Assinatura ausente ou inválida retorna `401` com erro JSON padronizado.
+
+### Consequências
+O backend pode reagir a mudanças reais no GitHub com baixa latência e sem expor execução anônima. A ação humana obrigatória é configurar o secret no `.env` e no webhook do GitHub com o mesmo valor.
+
+## ADR-21 — Sync agendado respeitando ETag
+
+### Contexto
+Webhooks podem falhar, ser desabilitados ou não existir em todos os repositórios. O sistema precisa de uma rotina periódica de reconciliação sem reprocessar conteúdo inalterado nem pressionar desnecessariamente a API do GitHub.
+
+### Decisão
+Adicionar o comando `commandsphere:sync-scheduled` ao scheduler Laravel, com cron configurável por `COMMANDSPHERE_SYNC_SCHEDULE`. O comando enfileira ingestões das versões latest e o `GitHubClient` mantém o uso de ETag/`If-None-Match` por arquivo para pular conteúdo sem alteração.
+
+### Consequências
+A ingestão fica resiliente a perda de webhook e preserva idempotência. O trade-off é que a cadência precisa ser calibrada com rate limit do GitHub e tamanho dos repositórios monitorados.
+
+## ADR-22 — Canais Reverb privados por comunidade
+
+### Contexto
+Status de ingestão e atualização de índice são eventos operacionais por comunidade. Canais globais poderiam vazar informação entre comunidades ou exigir filtragem client-side frágil.
+
+### Decisão
+Broadcastar eventos em `private-community.{slug}` via Reverb, autorizado por Sanctum no endpoint `/api/broadcasting/auth`. A autorização exige que o usuário pertença à comunidade e tenha `ingestion.run` ou `analytics.view`. O frontend usa Echo de forma SSR-safe e assina apenas comunidades presentes no estado autenticado.
+
+### Consequências
+O admin de ingestões recebe atualizações ao vivo sem refresh e sem expor eventos de outras comunidades. O custo é manter Reverb, Horizon e credenciais de broadcast alinhados no Docker e nos ambientes futuros.
