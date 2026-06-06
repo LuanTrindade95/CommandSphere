@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { of } from 'rxjs';
 
@@ -32,6 +33,7 @@ describe('AppComponent', () => {
           },
           loader: TestTranslocoLoader,
         }),
+        provideRouter([]),
       ],
     }).compileComponents();
   });
@@ -42,10 +44,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render translated product name', () => {
+  it('should render the router outlet', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('CommandSphere');
+    expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });
