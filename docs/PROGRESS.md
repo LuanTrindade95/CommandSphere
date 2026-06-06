@@ -2,7 +2,7 @@
 
 | Fase | Status | Evidência |
 |---|---|---|
-| Fase 1 — Fundação (scaffold do monorepo) | ⏳ Pendente | — |
+| Fase 1 — Fundação (scaffold do monorepo) | ✓ Concluída | `9045e88` backend · `f8eb667` frontend · `87aebf3` Docker · `700e1c0` CI · `12ef725` README |
 | Fase 2 — Domínio e Dados | ⏳ Pendente | — |
 | Fase 3A — Backend: Auth Discord + Permissões | ⏳ Pendente | — |
 | Fase 3B — Backend: Pipeline de Ingestão & Parser | ⏳ Pendente | — |
