@@ -1,13 +1,19 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Translation, TranslocoLoader } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
+import { of } from 'rxjs';
+
+import enTranslations from '../../../../public/i18n/en.json';
+import ptBrTranslations from '../../../../public/i18n/pt-BR.json';
+
+const TRANSLATIONS: Record<string, Translation> = {
+  'pt-BR': ptBrTranslations,
+  en: enTranslations,
+};
 
 @Injectable({ providedIn: 'root' })
 export class TranslocoHttpLoader implements TranslocoLoader {
-  private readonly http = inject(HttpClient);
-
   getTranslation(lang: string): Observable<Translation> {
-    return this.http.get<Translation>(`/i18n/${lang}.json`);
+    return of(TRANSLATIONS[lang] ?? TRANSLATIONS['pt-BR']);
   }
 }

@@ -2,10 +2,62 @@
   "app": {
     "name": "CommandSphere"
   },
+  "auth": {
+    "description": "Entre com Discord no fluxo real ou use o login de desenvolvimento enquanto as credenciais humanas não estiverem configuradas.",
+    "devEmailLabel": "E-mail de desenvolvimento",
+    "devEmailPlaceholder": "admin@demo",
+    "devLogin": "Entrar em dev",
+    "devLoginError": "Não foi possível autenticar com esse e-mail.",
+    "discord": "Entrar com Discord",
+    "login": "Entrar",
+    "logout": "Sair",
+    "title": "Acesso ao workspace"
+  },
+  "home": {
+    "badge": "Fundação frontend",
+    "codePreview": "/blood balance <player>\n/blood grant --amount <value>",
+    "foundationStatus": "Estado da base",
+    "ready": "Pronto",
+    "stack": {
+      "angular": {
+        "description": "Rotas lazy, SSR, hydration e estado local por signals.",
+        "title": "Angular SSR"
+      },
+      "laravel": {
+        "description": "Cliente tipado para autenticação, permissões e busca em tempo real.",
+        "title": "API segura"
+      },
+      "search": {
+        "description": "Command palette com debounce conectada ao índice Meilisearch.",
+        "title": "Descoberta rápida"
+      }
+    },
+    "summary": "Base dark-first para navegar comunidades, autenticar via API e buscar comandos sem criar ainda catálogo ou viewer.",
+    "title": "Console operacional para documentação de plugins"
+  },
+  "palette": {
+    "ariaLabel": "Paleta de comandos",
+    "authRequiredDescription": "Faça login para consultar comandos indexados por comunidade.",
+    "authRequiredTitle": "Autenticação necessária",
+    "emptyDescription": "Digite um termo para consultar a API de busca.",
+    "emptyTitle": "Busque um comando",
+    "escapeKey": "Esc",
+    "noResultsDescription": "A busca não encontrou comandos para o termo informado.",
+    "noResultsTitle": "Nenhum resultado",
+    "placeholder": "Buscar comando, sintaxe ou plugin",
+    "resultCount": "{{count}} resultados estimados",
+    "unknownPlugin": "Plugin"
+  },
   "shell": {
     "foundation": "Fundação SSR",
-    "headline": "Documentação inteligente para ecossistemas de plugins.",
-    "kicker": "Angular SSR · Laravel API · Meilisearch",
-    "summary": "A fundação do monorepo está preparada para i18n, renderização no servidor, busca indexada e comunicação em tempo real."
+    "languageLabel": "Idioma",
+    "noCommunity": "Nenhuma comunidade carregada",
+    "searchAria": "Abrir busca global",
+    "searchPlaceholder": "Buscar no CommandSphere",
+    "searchShortcut": "Ctrl K"
+  },
+  "toast": {
+    "forbidden": "Você não tem permissão para esta ação.",
+    "serverError": "Erro interno ao comunicar com a API."
   }
 }

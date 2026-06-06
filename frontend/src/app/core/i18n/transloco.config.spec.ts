@@ -35,7 +35,7 @@ describe('Transloco configuration', () => {
     });
   });
 
-  it('resolves pt-BR and en keys', async () => {
+  it('switches locale between pt-BR and en', async () => {
     const transloco = TestBed.inject(TranslocoService);
 
     transloco.setActiveLang('pt-BR');
