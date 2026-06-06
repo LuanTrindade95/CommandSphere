@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureCommunityPermission;
+use App\Http\Middleware\EnsurePluginPermission;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'community.permission' => EnsureCommunityPermission::class,
+            'plugin.permission' => EnsurePluginPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
