@@ -1,10 +1,14 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\Auth\AuthenticatedUserController;
 use App\Http\Controllers\Api\V1\Auth\DevLoginController;
 use App\Http\Controllers\Api\V1\Auth\DiscordAuthController;
+use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\IngestionController;
 use App\Http\Controllers\Api\V1\PluginSyncController;
+use App\Http\Controllers\Api\V1\SearchController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -15,6 +19,23 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthenticatedUserController::class, 'show']);
         Route::post('/auth/logout', [AuthenticatedUserController::class, 'destroy']);
+
+        Route::get('/search', SearchController::class);
+
+        Route::get('/communities', [CatalogController::class, 'communities']);
+        Route::get('/communities/{community:slug}', [CatalogController::class, 'community']);
+        Route::get('/plugins', [CatalogController::class, 'plugins']);
+        Route::get('/plugins/{slug}', [CatalogController::class, 'plugin']);
+        Route::get('/plugins/{slug}/versions/{version}/documents', [CatalogController::class, 'versionDocuments']);
+        Route::get('/documents/{document}', [CatalogController::class, 'document']);
+        Route::get('/commands/{slug}', [CatalogController::class, 'command']);
+
+        Route::get('/favorites', [FavoriteController::class, 'index']);
+        Route::post('/favorites', [FavoriteController::class, 'store']);
+        Route::delete('/favorites', [FavoriteController::class, 'destroy']);
+
+        Route::post('/commands/{slug}/view', [AnalyticsController::class, 'view']);
+        Route::get('/analytics/most-viewed', [AnalyticsController::class, 'mostViewed']);
 
         Route::post('/plugins/{plugin}/sync', PluginSyncController::class)
             ->middleware('plugin.permission:ingestion.run');

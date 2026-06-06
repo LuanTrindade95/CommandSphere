@@ -8,4 +8,8 @@ return [
         'fixture_path' => env('COMMANDSPHERE_GITHUB_FIXTURE_PATH'),
         'token' => env('GITHUB_TOKEN'),
     ],
+
+    'analytics' => [
+        'view_dedupe_minutes' => env('COMMANDSPHERE_VIEW_DEDUPE_MINUTES', 10),
+    ],
 ];
