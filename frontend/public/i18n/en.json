@@ -1,0 +1,11 @@
+{
+  "app": {
+    "name": "CommandSphere"
+  },
+  "shell": {
+    "foundation": "SSR Foundation",
+    "headline": "Intelligent documentation for plugin ecosystems.",
+    "kicker": "Angular SSR · Laravel API · Meilisearch",
+    "summary": "The monorepo foundation is ready for i18n, server-side rendering, indexed search, and realtime communication."
+  }
+}
