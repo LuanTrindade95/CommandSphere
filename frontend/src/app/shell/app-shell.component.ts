@@ -96,7 +96,10 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
                 {{ 'shell.nav.analytics' | transloco }}
               </a>
               <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/admin/plugins">
-                {{ 'shell.nav.admin' | transloco }}
+                {{ 'shell.nav.adminPlugins' | transloco }}
+              </a>
+              <a class="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/admin/ingestions">
+                {{ 'shell.nav.adminIngestions' | transloco }}
               </a>
             } @else {
               <span class="inline-flex h-9 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-neutral-gray">

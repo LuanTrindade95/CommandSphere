@@ -1,12 +1,19 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnDestroy, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { catchError, of } from 'rxjs';
 
 import { IngestionRunResource } from '@app/core/api/api.models';
 import { IngestionService } from '@app/core/admin/ingestion.service';
+import { AuthService } from '@app/core/auth/auth.service';
+import { RealtimeService, RealtimeSubscription } from '@app/core/realtime/realtime.service';
+import { ToastService } from '@app/core/toast/toast.service';
 import { UiBadgeComponent } from '@app/shared/ui/badge/ui-badge.component';
 import { UiEmptyStateComponent } from '@app/shared/ui/empty-state/ui-empty-state.component';
+
+interface IngestionRunStatusChangedPayload {
+  run: IngestionRunResource;
+}
 
 @Component({
   selector: 'app-admin-ingestions-page',
@@ -42,9 +49,13 @@ import { UiEmptyStateComponent } from '@app/shared/ui/empty-state/ui-empty-state
     </section>
   `,
 })
-export class AdminIngestionsPageComponent {
+export class AdminIngestionsPageComponent implements OnDestroy {
   private readonly ingestion = inject(IngestionService);
+  private readonly auth = inject(AuthService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly subscriptions: RealtimeSubscription[] = [];
 
   protected readonly runs = signal<IngestionRunResource[]>([]);
 
@@ -53,9 +64,40 @@ export class AdminIngestionsPageComponent {
       takeUntilDestroyed(this.destroyRef),
       catchError(() => of({ data: [] })),
     ).subscribe((response) => this.runs.set(response.data));
+
+    this.subscribeToRealtime();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((subscription) => subscription.stop());
   }
 
   stringify(value: unknown): string {
     return JSON.stringify(value ?? {}, null, 2);
+  }
+
+  private subscribeToRealtime(): void {
+    const communities = this.auth.communities()
+      .filter((community) => community.permissions['analytics.view'] === true || community.permissions['ingestion.run'] === true);
+
+    for (const community of communities) {
+      this.subscriptions.push(this.realtime.listenPrivate<IngestionRunStatusChangedPayload>(
+        `community.${community.slug}`,
+        'ingestion.run.status.changed',
+        (payload) => this.applyRun(payload.run),
+      ));
+    }
+  }
+
+  private applyRun(run: IngestionRunResource): void {
+    this.runs.update((runs) => {
+      const withoutCurrent = runs.filter((current) => current.id !== run.id);
+
+      return [run, ...withoutCurrent].sort((first, second) => second.id - first.id);
+    });
+
+    if (['success', 'partial', 'failed'].includes(run.status)) {
+      this.toast.info('admin.ingestions.finishedToast');
+    }
   }
 }

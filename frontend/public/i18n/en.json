@@ -5,6 +5,7 @@
       "description": "Inspect ingestion runs, status, structured stats, and logs.",
       "emptyDescription": "No ingestion run has been registered for accessible communities.",
       "emptyTitle": "No runs",
+      "finishedToast": "Sync finished.",
       "runId": "Run #{{id}}",
       "title": "Ingestions"
     },
@@ -157,7 +158,8 @@
     "foundation": "SSR Workspace",
     "languageLabel": "Language",
     "nav": {
-      "admin": "Admin",
+      "adminIngestions": "Ingestions",
+      "adminPlugins": "Plugins",
       "analytics": "Analytics",
       "favorites": "Favorites",
       "search": "Search"

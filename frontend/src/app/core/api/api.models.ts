@@ -138,6 +138,16 @@ export interface IngestionRunResource {
   log: Record<string, unknown> | unknown[] | null;
   started_at: string | null;
   finished_at: string | null;
+  plugin?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  community?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
 }
 
 export interface PluginCreatePayload {

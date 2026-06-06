@@ -5,6 +5,7 @@
       "description": "Acompanhe execuções de ingestão, status, estatísticas e logs estruturados.",
       "emptyDescription": "Nenhuma ingestão foi registrada para as comunidades acessíveis.",
       "emptyTitle": "Sem execuções",
+      "finishedToast": "Sincronização finalizada.",
       "runId": "Run #{{id}}",
       "title": "Ingestões"
     },
@@ -157,7 +158,8 @@
     "foundation": "Workspace SSR",
     "languageLabel": "Idioma",
     "nav": {
-      "admin": "Admin",
+      "adminIngestions": "Ingestões",
+      "adminPlugins": "Plugins",
       "analytics": "Analytics",
       "favorites": "Favoritos",
       "search": "Busca"
