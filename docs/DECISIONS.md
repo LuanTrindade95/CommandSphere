@@ -202,3 +202,25 @@ Usar Angular Signals em serviços focados (`AuthService`, `LoadingService`, `Toa
 
 ### Consequências
 O estado fica simples, tipado e compatível com SSR/hydration sem adicionar store global prematuro. Se fases futuras introduzirem cache complexo, colaboração realtime ou múltiplas fontes concorrentes de estado, a decisão pode ser revisitada com uma necessidade concreta.
+
+## ADR-18 — Markdown renderer customizado com sanitização
+
+### Contexto
+O doc viewer precisa renderizar `content_html` ingerido do backend, montar índice lateral por headings e realçar code blocks sem abrir superfície de XSS. Usar HTML direto no template ou depender apenas de CSS no conteúdo persistido colocaria segurança e consistência visual em risco.
+
+### Decisão
+Criar um `MarkdownRendererService` frontend que primeiro sanitiza o HTML com `DomSanitizer.sanitize(SecurityContext.HTML)`, depois aplica transformações controladas: ids estáveis em headings `h2/h3`, coleta do índice lateral e realce leve de sintaxe de comandos em blocos de código. O HTML final só é marcado como `SafeHtml` após essa sanitização e as transformações internas.
+
+### Consequências
+O viewer ganha navegação estrutural, code blocks consistentes com o design system e teste Jest cobrindo remoção de script malicioso. O trade-off é manter o renderer deliberadamente pequeno; se o domínio exigir Markdown interativo complexo, a decisão deve ser reavaliada com uma biblioteca sanitizável e compatível com SSR.
+
+## ADR-19 — Facets e filtros de busca como estado na URL
+
+### Contexto
+A tela `/search` precisa suportar busca em tempo real, facets por comunidade/plugin/categoria, navegação por teclado e compartilhamento de estado. Manter filtros apenas em estado local quebraria deep links e dificultaria retorno do browser.
+
+### Decisão
+Representar `q`, `community`, `plugin` e `category` em query params e centralizar a conversão no `SearchUrlStateService`. A tela observa os params, aplica debounce antes de chamar `/api/v1/search` e atualiza a URL ao trocar termo ou facet, reutilizando o mesmo `SearchService` da command palette.
+
+### Consequências
+Resultados e filtros ficam reproduzíveis por URL, compatíveis com SSR/hydration e mais fáceis de testar. O custo é disciplina para toda nova facet passar pelo mesmo serviço, evitando estado paralelo em componentes.

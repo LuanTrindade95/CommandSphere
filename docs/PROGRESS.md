@@ -8,7 +8,7 @@
 | Fase 3B — Backend: Pipeline de Ingestão & Parser | ✓ Concluída | `fcba9f5` GitHub client/ETag · `e3861b0` parser/fixtures · `0fae62c` ingestão idempotente/job/testes · `e1d67e2` endpoints · Pest/Pint/smoke Docker verdes |
 | Fase 3C — Backend: Busca, Catálogo, Favoritos & Analytics | ✓ Concluída | `90dc43f` indexação/Scout · `4889e51` search · `1390ba0` catálogo/cache · `4d9f2db` favoritos · `eb7c844` analytics/testes · `a23c8a9` env Meilisearch · Pest/Pint/smoke Meilisearch verdes |
 | Fase 4A — Frontend: Fundação SSR, auth, i18n e command palette | ✓ Concluída | `4c7c8a0` Transloco SSR · `2b17347` UI kit/palette · `0667506` auth/interceptors/guards · `62d0023` shell SSR · tsc/lint/Jest/build SSR/smoke Docker verdes |
-| Fase 4B — Frontend: Catálogo, Doc Viewer & Busca | ⏳ Pendente | — |
+| Fase 4B — Frontend: Catálogo, Doc Viewer & Busca | ✓ Concluída | `763e1d3` clientes/API/renderer · `de4cdc0` telas/rotas/i18n · `11785ce` Jest F4B · tsc/lint/Jest/build SSR/smoke Docker/browser verdes |
 | Fase 5 — Sincronização Automática + Realtime | ⏳ Pendente | — |
 | Fase 6 — Polish & Vitrine | ⏳ Pendente | — |
 
