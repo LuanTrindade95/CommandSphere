@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Command;
+
 return [
 
     /*
@@ -140,9 +142,17 @@ return [
         'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
         'key' => env('MEILISEARCH_KEY'),
         'index-settings' => [
-            // 'users' => [
-            //     'filterableAttributes'=> ['id', 'name', 'email'],
-            // ],
+            Command::class => [
+                'filterableAttributes' => [
+                    'community',
+                    'plugin',
+                    'category',
+                    'plugin_version',
+                ],
+                'sortableAttributes' => [
+                    'views',
+                ],
+            ],
         ],
     ],
 

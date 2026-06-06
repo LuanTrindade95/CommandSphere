@@ -93,14 +93,27 @@ class Command extends Model
             'pluginVersion.plugin.community',
         ]);
 
+        $pluginVersion = $this->pluginVersion;
+        $plugin = $pluginVersion?->plugin;
+        $community = $plugin?->community;
+
         return [
+            'id' => $this->id,
+            'document_id' => $this->document_id,
+            'plugin_version_id' => $this->plugin_version_id,
             'name' => $this->name,
+            'slug' => $this->slug,
             'syntax' => $this->syntax,
             'description' => $this->description,
             'aliases' => $this->aliases ?? [],
-            'category' => $this->category?->name,
-            'plugin' => $this->pluginVersion?->plugin?->name,
-            'community' => $this->pluginVersion?->plugin?->community?->name,
+            'category' => $this->category?->slug,
+            'category_name' => $this->category?->name,
+            'plugin' => $plugin?->slug,
+            'plugin_name' => $plugin?->name,
+            'plugin_version' => $pluginVersion?->version,
+            'community' => $community?->slug,
+            'community_name' => $community?->name,
+            'views' => (int) ($this->views_count ?? $this->views()->count()),
         ];
     }
 }

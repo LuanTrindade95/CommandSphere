@@ -12,6 +12,7 @@ use App\Models\Command;
 use App\Models\Document;
 use App\Models\IngestionRun;
 use App\Models\PluginVersion;
+use App\Services\Discovery\DiscoveryCache;
 use App\Services\Markdown\MarkdownParser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,6 +23,7 @@ class IngestionService
     public function __construct(
         private readonly GitHubClient $github,
         private readonly MarkdownParser $parser,
+        private readonly DiscoveryCache $cache,
     ) {}
 
     public function start(PluginVersion $pluginVersion): IngestionRun
@@ -79,9 +81,7 @@ class IngestionService
 
             try {
                 $parsedDocument = $this->parser->parse($file);
-                $result = DB::transaction(fn (): array => Command::withoutSyncingToSearch(
-                    fn (): array => $this->persistParsedDocument($pluginVersion, $parsedDocument),
-                ));
+                $result = DB::transaction(fn (): array => $this->persistParsedDocument($pluginVersion, $parsedDocument));
 
                 $stats['docs_parsed']++;
                 $stats['commands_extracted'] += $result['commands_extracted'];
@@ -114,6 +114,10 @@ class IngestionService
             'log' => $log,
             'finished_at' => now(),
         ]);
+
+        if ($stats['docs_parsed'] > 0) {
+            $this->cache->invalidate();
+        }
 
         return $run->refresh();
     }
@@ -159,11 +163,14 @@ class IngestionService
             );
         }
 
-        Command::query()
+        $staleCommands = Command::query()
             ->where('plugin_version_id', $pluginVersion->id)
             ->where('document_id', $document->id)
             ->when($seenSlugs !== [], fn ($query) => $query->whereNotIn('slug', $seenSlugs))
-            ->delete();
+            ->get();
+
+        $staleCommands->unsearchable();
+        $staleCommands->each->delete();
 
         return [
             'commands_extracted' => count($seenSlugs),
