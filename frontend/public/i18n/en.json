@@ -127,10 +127,10 @@
     "screenshots": {
       "docsAlt": "Doc viewer with sanitized markdown, side index, and version selector",
       "docsTitle": "Doc viewer",
-      "paletteAlt": "Command palette with results from Meilisearch",
-      "paletteTitle": "Command palette",
       "searchAlt": "Global search with facets by community, plugin, and category",
-      "searchTitle": "Faceted search"
+      "searchTitle": "Faceted search",
+      "adminAlt": "Ingestion operations screen with status, stats, and structured logs",
+      "adminTitle": "Ingestion operations"
     },
     "screenshotsBadge": "Real screenshots",
     "screenshotsTitle": "Final product interface",
@@ -216,7 +216,8 @@
     "noCommunity": "No community loaded",
     "searchAria": "Open global search",
     "searchPlaceholder": "Search CommandSphere",
-    "searchShortcut": "Ctrl K"
+    "searchShortcut": "Ctrl K",
+    "mobileMenu": "Menu"
   },
   "toast": {
     "forbidden": "You do not have permission for this action.",

@@ -11,7 +11,7 @@ import { IconName, UiIconComponent } from '@app/shared/ui/icon/ui-icon.component
   standalone: true,
   imports: [RouterLink, TranslocoPipe, UiBadgeComponent, UiIconComponent],
   template: `
-    <section class="relative isolate grid min-h-[calc(100vh-7rem)] content-center overflow-hidden py-10">
+    <section class="relative isolate overflow-hidden py-8 md:py-12 lg:py-14">
       <div class="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_top_left,rgb(124_58_237_/_22%),transparent_34%),linear-gradient(180deg,rgb(2_6_23),rgb(2_6_23_/_82%))]"></div>
       <div class="absolute inset-x-0 bottom-0 -z-10 hidden h-[58%] border-t border-neon-cyan/10 bg-[linear-gradient(115deg,rgb(124_58_237_/_18%),transparent_34%),linear-gradient(90deg,rgb(34_211_238_/_10%)_1px,transparent_1px),linear-gradient(0deg,rgb(34_211_238_/_8%)_1px,transparent_1px)] bg-[size:auto,72px_72px,72px_72px] opacity-70 md:block"></div>
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-center">
@@ -111,9 +111,15 @@ import { IconName, UiIconComponent } from '@app/shared/ui/icon/ui-icon.component
       </div>
       <div class="grid gap-4 lg:grid-cols-3">
         @for (shot of screenshots; track shot.src) {
-          <figure class="overflow-hidden rounded-lg border border-white/10 bg-surface-dark/72">
-            <img class="aspect-[16/10] w-full object-cover" [src]="shot.src" [alt]="shot.altKey | transloco" width="960" height="600" loading="lazy" decoding="async" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-sm font-semibold text-slate-200">{{ shot.titleKey | transloco }}</figcaption>
+          <figure class="overflow-hidden rounded-lg border border-white/10 bg-surface-dark/76 p-2 shadow-[0_24px_70px_rgb(0_0_0_/_28%)]">
+            <div class="flex h-8 items-center gap-1.5 border-b border-white/8 px-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-400/70"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-yellow-300/70"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-neon-cyan/70"></span>
+              <span class="ml-2 h-3 w-24 rounded-full bg-white/8"></span>
+            </div>
+            <img class="aspect-[16/10] w-full rounded-md bg-deep-space/80 object-contain p-1" [src]="shot.src" [alt]="shot.altKey | transloco" width="960" height="600" loading="eager" decoding="async" />
+            <figcaption class="px-2 pt-3 pb-1 text-sm font-semibold text-slate-200">{{ shot.titleKey | transloco }}</figcaption>
           </figure>
         }
       </div>
@@ -141,9 +147,9 @@ export class HomePageComponent {
   ];
   protected readonly stack = ['Angular SSR', 'Laravel 12', 'GitHub API', 'Discord OAuth2', 'Meilisearch', 'Reverb', 'Redis', 'MySQL'];
   protected readonly screenshots = [
-    { src: '/portfolio/command-palette.png', altKey: 'home.screenshots.paletteAlt', titleKey: 'home.screenshots.paletteTitle' },
     { src: '/portfolio/doc-viewer.png', altKey: 'home.screenshots.docsAlt', titleKey: 'home.screenshots.docsTitle' },
     { src: '/portfolio/search-page.png', altKey: 'home.screenshots.searchAlt', titleKey: 'home.screenshots.searchTitle' },
+    { src: '/portfolio/admin-ingestions.png', altKey: 'home.screenshots.adminAlt', titleKey: 'home.screenshots.adminTitle' },
   ];
 
   constructor() {

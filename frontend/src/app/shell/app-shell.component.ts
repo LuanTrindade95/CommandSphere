@@ -75,7 +75,7 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
             </div>
           </div>
 
-          <nav class="mt-3 flex min-h-9 max-w-full gap-2 overflow-x-auto">
+          <nav class="mt-3 hidden min-h-9 max-w-full gap-2 overflow-x-auto sm:flex">
             @if (auth.communities().length > 0) {
               @for (community of auth.communities(); track community.slug) {
                 <a
@@ -110,6 +110,51 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
               </a>
             }
           </nav>
+
+          <details class="group mt-3 rounded-md border border-white/10 bg-surface-dark/72 sm:hidden">
+            <summary class="flex h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-semibold text-slate-200">
+              <span class="inline-flex min-w-0 items-center gap-2">
+                <app-ui-icon name="command" [size]="15" />
+                <span class="truncate">{{ 'shell.mobileMenu' | transloco }}</span>
+              </span>
+              <app-ui-icon class="transition group-open:rotate-90" name="chevron-right" [size]="15" />
+            </summary>
+            <nav class="grid max-h-[60vh] gap-2 overflow-y-auto border-t border-white/10 p-2">
+              @if (auth.communities().length > 0) {
+                @for (community of auth.communities(); track community.slug) {
+                  <a
+                    class="inline-flex h-10 min-w-0 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"
+                    [routerLink]="['/c', community.slug]"
+                  >
+                    <app-ui-icon name="shield" [size]="14" />
+                    <span class="truncate">{{ community.name }}</span>
+                  </a>
+                }
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/search">
+                  {{ 'shell.nav.search' | transloco }}
+                </a>
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/favorites">
+                  {{ 'shell.nav.favorites' | transloco }}
+                </a>
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/analytics">
+                  {{ 'shell.nav.analytics' | transloco }}
+                </a>
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/admin/plugins">
+                  {{ 'shell.nav.adminPlugins' | transloco }}
+                </a>
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/admin/ingestions">
+                  {{ 'shell.nav.adminIngestions' | transloco }}
+                </a>
+              } @else {
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/c/celem-ecosystem">
+                  {{ 'shell.nav.catalog' | transloco }}
+                </a>
+                <a class="inline-flex h-10 items-center rounded-md border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200" routerLink="/search">
+                  {{ 'shell.nav.search' | transloco }}
+                </a>
+              }
+            </nav>
+          </details>
         </header>
 
         <section class="py-6">

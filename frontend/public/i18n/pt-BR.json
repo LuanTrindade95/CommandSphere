@@ -6,7 +6,7 @@
       "emptyDescription": "Nenhuma ingestão foi registrada para as comunidades acessíveis.",
       "emptyTitle": "Sem execuções",
       "finishedToast": "Sincronização finalizada.",
-      "runId": "Run #{{id}}",
+      "runId": "Execução #{{id}}",
       "title": "Ingestões"
     },
     "plugins": {
@@ -29,7 +29,7 @@
     }
   },
   "analytics": {
-    "badge": "Analytics",
+    "badge": "Métricas",
     "communityLabel": "Comunidade",
     "description": "Ranking de comandos mais vistos dentro do período selecionado.",
     "emptyDescription": "Ainda não há visualizações registradas para este período.",
@@ -71,14 +71,14 @@
   },
   "command": {
     "aliasesEmpty": "Nenhum alias cadastrado.",
-    "aliasesTitle": "Aliases",
+    "aliasesTitle": "Apelidos",
     "errorDescription": "Não foi possível carregar o comando solicitado.",
     "errorTitle": "Comando indisponível",
     "noDescription": "Sem descrição cadastrada.",
     "parametersEmpty": "Nenhum parâmetro estruturado cadastrado.",
     "parametersTitle": "Parâmetros",
     "unknownPlugin": "Plugin",
-    "views": "{{count}} views"
+    "views": "{{count}} visualizações"
   },
   "docs": {
     "backToCatalog": "Voltar ao catálogo",
@@ -103,13 +103,13 @@
     "unknownPlugin": "Plugin"
   },
   "home": {
-    "badge": "Portfólio técnico · SaaS developer tools",
+    "badge": "Portfólio técnico · SaaS para documentação de plugins",
     "featuresBadge": "Produto",
     "featuresTitle": "Um hub operacional para documentação viva",
     "heroImageAlt": "Interface dark-first do CommandSphere com busca e documentação estruturada",
     "metrics": {
       "idempotent": {
-        "label": "Pipeline com upsert por chave natural e reconciliação em re-sync.",
+        "label": "Pipeline com upsert por chave natural e reconciliação em ressincronização.",
         "value": "Ingestão idempotente"
       },
       "permissions": {
@@ -117,31 +117,31 @@
         "value": "Escopo por comunidade"
       },
       "realtime": {
-        "label": "Horizon + Reverb atualizando runs de ingestão sem refresh.",
-        "value": "Operação realtime"
+        "label": "Horizon + Reverb atualizando execuções de ingestão sem recarregar a página.",
+        "value": "Operação em tempo real"
       }
     },
     "pipelineBadge": "Pipeline",
     "pipelineTitle": "GitHub → parser → índice → busca",
     "primaryCta": "Explorar busca",
     "screenshots": {
-      "docsAlt": "Doc viewer com markdown sanitizado, índice lateral e seletor de versão",
-      "docsTitle": "Doc viewer",
-      "paletteAlt": "Command palette com resultados vindos do Meilisearch",
-      "paletteTitle": "Command palette",
-      "searchAlt": "Busca global com facets por comunidade, plugin e categoria",
-      "searchTitle": "Busca facetada"
+      "docsAlt": "Visualizador de documentação com Markdown sanitizado, índice lateral e seletor de versão",
+      "docsTitle": "Visualizador de documentação",
+      "searchAlt": "Busca global com facetas por comunidade, plugin e categoria",
+      "searchTitle": "Busca com facetas",
+      "adminAlt": "Tela de ingestões com status, estatísticas e logs estruturados",
+      "adminTitle": "Operação de ingestões"
     },
-    "screenshotsBadge": "Screenshots reais",
+    "screenshotsBadge": "Capturas reais",
     "screenshotsTitle": "Interface final do produto",
     "secondaryCta": "Abrir catálogo",
-    "stackBadge": "Stack",
-    "stackTitle": "Arquitetura full stack usada no projeto",
-    "summary": "Toda sua documentação. Em um único ecossistema. CommandSphere ingere Markdown do GitHub, extrai comandos, indexa no Meilisearch e entrega descoberta rápida com SSR, i18n, permissões e realtime.",
+    "stackBadge": "Arquitetura",
+    "stackTitle": "Stack técnica usada no projeto",
+    "summary": "Toda sua documentação. Em um único ecossistema. CommandSphere ingere Markdown do GitHub, extrai comandos, indexa no Meilisearch e entrega descoberta rápida com SSR, i18n, permissões e tempo real.",
     "title": "Toda sua documentação. Em um único ecossistema.",
     "features": {
       "discovery": {
-        "description": "Busca em tempo real, facets por comunidade/plugin/categoria, command palette e páginas de comando com analytics.",
+        "description": "Busca em tempo real, facetas por comunidade/plugin/categoria, paleta de comandos e páginas de comando com métricas.",
         "title": "Descoberta rápida"
       },
       "ingestion": {
@@ -149,7 +149,7 @@
         "title": "Ingestão confiável"
       },
       "operations": {
-        "description": "Sync manual, webhook GitHub, scheduler, Horizon, Reverb e logs estruturados para operar o pipeline.",
+        "description": "Sincronização manual, webhook GitHub, agendador, Horizon, Reverb e logs estruturados para operar o pipeline.",
         "title": "Operação observável"
       }
     },
@@ -159,15 +159,15 @@
         "title": "GitHub API"
       },
       "index": {
-        "description": "Persiste documentos/comandos e atualiza Meilisearch com facets.",
+        "description": "Persiste documentos/comandos e atualiza Meilisearch com facetas.",
         "title": "Índice"
       },
       "parser": {
-        "description": "CommonMark + frontmatter/heading convention extraem comandos sem heurística frágil.",
-        "title": "Parser"
+        "description": "CommonMark + frontmatter/convenção de headings extraem comandos sem heurística frágil.",
+        "title": "Analisador"
       },
       "search": {
-        "description": "Angular SSR consome APIs enxutas para busca, docs, favoritos e analytics.",
+        "description": "Angular SSR consome APIs enxutas para busca, documentação, favoritos e métricas.",
         "title": "Busca"
       }
     }
@@ -195,7 +195,7 @@
       "plugin": "Plugin"
     },
     "loading": "Buscando comandos...",
-    "noFacets": "Sem facets",
+    "noFacets": "Sem facetas",
     "queryLabel": "Termo",
     "queryPlaceholder": "Buscar por comando, sintaxe ou descrição",
     "resultCount": "{{count}} resultados estimados",
@@ -203,12 +203,12 @@
     "unknownPlugin": "Plugin"
   },
   "shell": {
-    "foundation": "Workspace SSR",
+    "foundation": "Área SSR",
     "languageLabel": "Idioma",
     "nav": {
       "adminIngestions": "Ingestões",
       "adminPlugins": "Plugins",
-      "analytics": "Analytics",
+      "analytics": "Métricas",
       "catalog": "Catálogo",
       "favorites": "Favoritos",
       "search": "Busca"
@@ -216,7 +216,8 @@
     "noCommunity": "Nenhuma comunidade carregada",
     "searchAria": "Abrir busca global",
     "searchPlaceholder": "Buscar no CommandSphere",
-    "searchShortcut": "Ctrl K"
+    "searchShortcut": "Ctrl K",
+    "mobileMenu": "Menu"
   },
   "toast": {
     "forbidden": "Você não tem permissão para esta ação.",
