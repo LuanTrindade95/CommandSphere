@@ -257,3 +257,36 @@ Broadcastar eventos em `private-community.{slug}` via Reverb, autorizado por San
 
 ### Consequências
 O admin de ingestões recebe atualizações ao vivo sem refresh e sem expor eventos de outras comunidades. O custo é manter Reverb, Horizon e credenciais de broadcast alinhados no Docker e nos ambientes futuros.
+
+## ADR-23 — SEO/SSR com discovery público de leitura
+
+### Contexto
+O CommandSphere precisa funcionar como produto e também como peça de portfólio indexável. Páginas de landing, busca, catálogo, plugins, documentos e comandos devem renderizar conteúdo real no servidor para SEO, previews sociais e avaliação sem login. Ao mesmo tempo, dados operacionais, favoritos, analytics e ações administrativas continuam exigindo usuário autenticado e permissões por comunidade.
+
+### Decisão
+Expor endpoints de leitura do discovery como públicos quando a requisição é anônima, mantendo escopo por bearer token quando ele existe. O frontend SSR usa uma URL interna de API por ambiente (`COMMANDSPHERE_API_INTERNAL_URL`) para renderizar conteúdo público no servidor. Landing, plugin e comando atualizam `title`, description, canonical, Open Graph e JSON-LD; `robots.txt` e `sitemap.xml` ficam no build público.
+
+### Consequências
+As páginas públicas ficam indexáveis e auditáveis por Lighthouse sem depender de sessão. O trade-off é separar explicitamente leitura pública de ações autenticadas, para não confundir catálogo indexável com dados privados. Requisições com header de autenticação inválido não são promovidas a escopo público.
+
+## ADR-24 — Hardening de superfície pública
+
+### Contexto
+A Fase 6 amplia a superfície pública com SSR, landing, busca indexável e screenshots. Isso exige revisar XSS, rate limiting, headers e dependências para que o projeto não pareça apenas funcional, mas operável.
+
+### Decisão
+Manter sanitização de Markdown antes de `SafeHtml`, aplicar headers de segurança no Laravel e no servidor SSR Node, limitar rotas de busca/sync/webhook, validar webhook GitHub com HMAC SHA-256, manter token Sanctum apenas em memória e auditar dependências com `composer audit` e `npm audit --audit-level=critical`.
+
+### Consequências
+O projeto reduz riscos comuns de portfólio público: HTML inseguro, endpoints de sync abusáveis, webhook forjável e secrets em código. O npm ainda reporta vulnerabilidades moderadas/altas em dependências de tooling Angular sem correção não quebrável; a regra de release é bloquear vulnerabilidade crítica e registrar o risco até atualização segura da toolchain.
+
+## ADR-25 — Build de produção multi-stage
+
+### Contexto
+O Docker de desenvolvimento privilegia feedback rápido e ferramentas de teste. Para avaliação de deploy, o projeto precisa demonstrar imagens separadas, menor superfície e composição próxima de produção.
+
+### Decisão
+Adicionar Dockerfiles multi-stage para backend PHP-FPM e frontend Node SSR, além de `docker-compose.prod.yml` com Nginx para API, MySQL, Redis, Meilisearch, Horizon e Reverb. O build de produção consome variáveis de ambiente documentadas e não embute secrets.
+
+### Consequências
+A stack pode ser validada localmente com `docker compose -f docker-compose.prod.yml up -d --build`, preservando separação entre runtime PHP-FPM, SSR Node e serviços de dados. O trade-off é manter dois caminhos Docker: dev com DX/testes e prod com empacotamento mais fiel ao deploy.
