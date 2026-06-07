@@ -10,7 +10,7 @@
 | Fase 4A — Frontend: Fundação SSR, auth, i18n e command palette | ✓ Concluída | `4c7c8a0` Transloco SSR · `2b17347` UI kit/palette · `0667506` auth/interceptors/guards · `62d0023` shell SSR · tsc/lint/Jest/build SSR/smoke Docker verdes |
 | Fase 4B — Frontend: Catálogo, Doc Viewer & Busca | ✓ Concluída | `763e1d3` clientes/API/renderer · `de4cdc0` telas/rotas/i18n · `11785ce` Jest F4B · tsc/lint/Jest/build SSR/smoke Docker/browser verdes |
 | Fase 5 — Sincronização Automática + Realtime | ✓ Concluída | `49a32e0` scheduler/webhook/broadcasts/canais/Docker · `07f345c` Echo/Reverb e status ao vivo no admin · Pest/Pint/tsc/lint/build SSR verdes · smoke Reverb+Horizon em duas sessões validado |
-| Fase 6 — Polish & Vitrine | ⏳ Pendente | — |
+| Fase 6 — Polish & Vitrine | ✓ Concluída | `4e2bafb` testes/cobertura/E2E · `bc74d2b` discovery público/hardening · `61705e5` landing/SEO SSR · `347549d` Docker prod/README/ADRs · projeto v1 completo |
 
 ## Correções complementares
 
