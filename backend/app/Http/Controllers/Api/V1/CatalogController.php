@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class CatalogController extends Controller
 {
@@ -29,8 +30,7 @@ class CatalogController extends Controller
 
     public function communities(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
 
         return response()->json([
             'data' => $this->cache->remember(
@@ -45,8 +45,7 @@ class CatalogController extends Controller
 
     public function community(Request $request, Community $community): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $this->access->ensureCommunity($user, $community);
 
         return response()->json([
@@ -60,8 +59,7 @@ class CatalogController extends Controller
 
     public function plugins(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $community = $request->query('community');
 
         return response()->json([
@@ -82,8 +80,7 @@ class CatalogController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
 
         $data = $request->validate([
             'community_id' => ['required', 'integer', 'exists:communities,id'],
@@ -126,8 +123,7 @@ class CatalogController extends Controller
 
     public function plugin(Request $request, string $slug): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $plugin = $this->pluginBySlug($request, $user, $slug)
             ->with(['community', 'versions' => fn ($query) => $query->latest('published_at')])
             ->firstOrFail();
@@ -143,8 +139,7 @@ class CatalogController extends Controller
 
     public function versionDocuments(Request $request, string $slug, string $version): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $plugin = $this->pluginBySlug($request, $user, $slug)->firstOrFail();
         $pluginVersion = PluginVersion::query()
             ->where('plugin_id', $plugin->id)
@@ -169,8 +164,7 @@ class CatalogController extends Controller
 
     public function document(Request $request, Document $document): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $document = $this->access->documents($user)
             ->with('pluginVersion.plugin.community')
             ->whereKey($document->id)
@@ -187,8 +181,7 @@ class CatalogController extends Controller
 
     public function command(Request $request, string $slug): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $user = $this->currentUser($request);
         $command = $this->access->commands($user)
             ->with(['category', 'pluginVersion.plugin.community'])
             ->withCount('views')
@@ -208,7 +201,7 @@ class CatalogController extends Controller
     /**
      * @return Builder<Plugin>
      */
-    private function pluginBySlug(Request $request, User $user, string $slug): Builder
+    private function pluginBySlug(Request $request, ?User $user, string $slug): Builder
     {
         $community = $request->query('community');
 
@@ -216,5 +209,31 @@ class CatalogController extends Controller
             ->where('slug', $slug)
             ->when(is_string($community) && $community !== '', fn (Builder $query): Builder => $query
                 ->whereHas('community', fn (Builder $communityQuery): Builder => $communityQuery->where('slug', $community)));
+    }
+
+    private function currentUser(Request $request): ?User
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $token = $request->bearerToken();
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        $accessToken = PersonalAccessToken::findToken($token);
+        $tokenable = $accessToken?->tokenable;
+
+        if ($tokenable instanceof User) {
+            return $tokenable;
+        }
+
+        // Do not widen an authenticated-looking request to the anonymous public scope.
+        return $request->headers->has('Authorization') ? new User : null;
     }
 }

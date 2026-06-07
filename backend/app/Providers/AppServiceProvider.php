@@ -10,7 +10,10 @@ use App\Policies\IngestionPolicy;
 use App\Policies\PluginPolicy;
 use App\Services\GitHub\FixtureGitHubClient;
 use App\Services\GitHub\HttpGitHubClient;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -40,5 +43,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Plugin::class, PluginPolicy::class);
         Gate::policy(IngestionRun::class, IngestionPolicy::class);
         Gate::define('analytics.view', [AnalyticsPolicy::class, 'view']);
+
+        RateLimiter::for('search', fn (Request $request): Limit => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('sync', fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('webhooks', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
     }
 }

@@ -15,8 +15,16 @@ class DiscoveryAccess
     /**
      * @return list<int>
      */
-    public function communityIds(User $user): array
+    public function communityIds(?User $user): array
     {
+        if ($user === null) {
+            return Community::query()
+                ->pluck('id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->values()
+                ->all();
+        }
+
         return $user->communities()
             ->pluck('communities.id')
             ->map(fn (mixed $id): int => (int) $id)
@@ -24,8 +32,12 @@ class DiscoveryAccess
             ->all();
     }
 
-    public function ensureCommunity(User $user, Community $community): void
+    public function ensureCommunity(?User $user, Community $community): void
     {
+        if ($user === null) {
+            return;
+        }
+
         if (! in_array($community->id, $this->communityIds($user), true)) {
             throw new AuthorizationException('You do not have access to this community.');
         }
@@ -34,7 +46,7 @@ class DiscoveryAccess
     /**
      * @return Builder<Community>
      */
-    public function communities(User $user): Builder
+    public function communities(?User $user): Builder
     {
         return Community::query()
             ->whereIn('id', $this->communityIds($user));
@@ -43,7 +55,7 @@ class DiscoveryAccess
     /**
      * @return Builder<Plugin>
      */
-    public function plugins(User $user): Builder
+    public function plugins(?User $user): Builder
     {
         return Plugin::query()
             ->whereIn('community_id', $this->communityIds($user));
@@ -52,7 +64,7 @@ class DiscoveryAccess
     /**
      * @return Builder<Document>
      */
-    public function documents(User $user): Builder
+    public function documents(?User $user): Builder
     {
         return Document::query()
             ->whereHas('pluginVersion.plugin', fn (Builder $query): Builder => $query
@@ -62,7 +74,7 @@ class DiscoveryAccess
     /**
      * @return Builder<Command>
      */
-    public function commands(User $user): Builder
+    public function commands(?User $user): Builder
     {
         return Command::query()
             ->whereHas('pluginVersion.plugin', fn (Builder $query): Builder => $query

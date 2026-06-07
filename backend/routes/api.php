@@ -16,22 +16,23 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/auth/discord/redirect', [DiscordAuthController::class, 'redirect']);
     Route::get('/auth/discord/callback', [DiscordAuthController::class, 'callback']);
     Route::post('/auth/dev-login', DevLoginController::class);
-    Route::post('/webhooks/github', GitHubWebhookController::class);
+    Route::post('/webhooks/github', GitHubWebhookController::class)->middleware('throttle:webhooks');
+
+    Route::get('/search', SearchController::class)->middleware('throttle:search');
+
+    Route::get('/communities', [CatalogController::class, 'communities']);
+    Route::get('/communities/{community:slug}', [CatalogController::class, 'community']);
+    Route::get('/plugins', [CatalogController::class, 'plugins']);
+    Route::get('/plugins/{slug}', [CatalogController::class, 'plugin']);
+    Route::get('/plugins/{slug}/versions/{version}/documents', [CatalogController::class, 'versionDocuments']);
+    Route::get('/documents/{document}', [CatalogController::class, 'document']);
+    Route::get('/commands/{slug}', [CatalogController::class, 'command']);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthenticatedUserController::class, 'show']);
         Route::post('/auth/logout', [AuthenticatedUserController::class, 'destroy']);
 
-        Route::get('/search', SearchController::class);
-
-        Route::get('/communities', [CatalogController::class, 'communities']);
-        Route::get('/communities/{community:slug}', [CatalogController::class, 'community']);
-        Route::get('/plugins', [CatalogController::class, 'plugins']);
         Route::post('/plugins', [CatalogController::class, 'store']);
-        Route::get('/plugins/{slug}', [CatalogController::class, 'plugin']);
-        Route::get('/plugins/{slug}/versions/{version}/documents', [CatalogController::class, 'versionDocuments']);
-        Route::get('/documents/{document}', [CatalogController::class, 'document']);
-        Route::get('/commands/{slug}', [CatalogController::class, 'command']);
 
         Route::get('/favorites', [FavoriteController::class, 'index']);
         Route::post('/favorites', [FavoriteController::class, 'store']);
@@ -41,6 +42,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/analytics/most-viewed', [AnalyticsController::class, 'mostViewed']);
 
         Route::post('/plugins/{plugin}/sync', PluginSyncController::class)
+            ->middleware('throttle:sync')
             ->middleware('plugin.permission:ingestion.run');
 
         Route::get('/ingestions', [IngestionController::class, 'index']);
