@@ -4,8 +4,10 @@ import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { AuthService } from '@app/core/auth/auth.service';
 import { CatalogService } from '@app/core/catalog/catalog.service';
 import { FavoriteService } from '@app/core/favorites/favorite.service';
+import { SeoService } from '@app/core/seo/seo.service';
 
 import { PluginDocsPageComponent } from './plugin-docs.page';
 
@@ -89,6 +91,18 @@ describe('PluginDocsPageComponent', () => {
             isFavorite: () => false,
             add: () => of({ data: null }),
             remove: () => of(undefined),
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: {
+            isAuthenticated: () => true,
+          },
+        },
+        {
+          provide: SeoService,
+          useValue: {
+            update: () => undefined,
           },
         },
         {

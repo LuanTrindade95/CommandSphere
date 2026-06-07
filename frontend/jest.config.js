@@ -2,6 +2,7 @@ module.exports = {
   preset: 'jest-preset-angular',
   setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
   testEnvironment: 'jsdom',
+  testPathIgnorePatterns: ['<rootDir>/e2e/', '<rootDir>/test-results/', '<rootDir>/playwright-report/'],
   transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$|@angular|@jsverse|rxjs|tslib)'],
   moduleNameMapper: {
     '^@app/(.*)$': '<rootDir>/src/app/$1',
