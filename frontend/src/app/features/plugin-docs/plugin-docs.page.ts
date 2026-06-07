@@ -6,9 +6,11 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { catchError, of } from 'rxjs';
 
 import { DocumentResource, PluginResource } from '@app/core/api/api.models';
+import { AuthService } from '@app/core/auth/auth.service';
 import { CatalogService } from '@app/core/catalog/catalog.service';
 import { FavoriteService } from '@app/core/favorites/favorite.service';
 import { MarkdownRendererService, RenderedMarkdown } from '@app/core/markdown/markdown-renderer.service';
+import { SeoService } from '@app/core/seo/seo.service';
 import { UiBadgeComponent } from '@app/shared/ui/badge/ui-badge.component';
 import { UiButtonComponent } from '@app/shared/ui/button/ui-button.component';
 import { UiEmptyStateComponent } from '@app/shared/ui/empty-state/ui-empty-state.component';
@@ -104,9 +106,11 @@ import { UiSkeletonComponent } from '@app/shared/ui/skeleton/ui-skeleton.compone
 export class PluginDocsPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
   private readonly catalog = inject(CatalogService);
   private readonly renderer = inject(MarkdownRendererService);
   private readonly favorites = inject(FavoriteService);
+  private readonly seo = inject(SeoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly params = toSignal(this.route.paramMap);
   private readonly queryParams = toSignal(this.route.queryParamMap);
@@ -122,7 +126,10 @@ export class PluginDocsPageComponent {
   protected readonly pluginSlug = computed(() => this.params()?.get('plugin') ?? '');
 
   constructor() {
-    void this.favorites.load().subscribe();
+    if (this.auth.isAuthenticated()) {
+      void this.favorites.load().subscribe();
+    }
+
     effect(() => this.loadPlugin(this.communitySlug(), this.pluginSlug()));
   }
 
@@ -201,6 +208,19 @@ export class PluginDocsPageComponent {
       const version = requestedVersion ?? latest;
 
       this.plugin.set(plugin);
+      this.seo.update({
+        title: `${plugin.name} - Documentação CommandSphere`,
+        description: plugin.description ?? `Documentação estruturada do plugin ${plugin.name} no CommandSphere.`,
+        canonicalPath: `/c/${this.communitySlug()}/p/${plugin.slug}`,
+        type: 'article',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@type': 'TechArticle',
+          headline: `${plugin.name} documentation`,
+          description: plugin.description ?? `Structured documentation for ${plugin.name}.`,
+          about: plugin.slug,
+        },
+      });
       this.selectedVersion.set(version);
       this.loadDocuments(plugin.slug, version, this.queryParams()?.get('doc') ?? null);
     });

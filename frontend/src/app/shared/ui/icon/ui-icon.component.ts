@@ -1,42 +1,58 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { AlertTriangle, Check, ChevronRight, Command, FileText, Globe2, LoaderCircle, LogIn, LogOut, LucideIconData, Search, Shield, Sparkles, Star, Terminal, User, X } from 'lucide-angular';
+import { Activity, AlertTriangle, BookOpen, Check, ChevronRight, Command, Database, FileCode, FileText, GitBranch, Github, Globe2, LoaderCircle, LogIn, LogOut, LucideIconData, Search, Shield, ShieldCheck, Sparkles, Star, Terminal, User, X, Zap } from 'lucide-angular';
 
-type IconName =
+export type IconName =
+  | 'activity'
   | 'alert-triangle'
+  | 'book-open'
   | 'check'
   | 'chevron-right'
   | 'command'
+  | 'database'
+  | 'file-code'
   | 'file-text'
+  | 'git-branch'
+  | 'github'
   | 'globe-2'
   | 'loader-circle'
   | 'log-in'
   | 'log-out'
   | 'search'
   | 'shield'
+  | 'shield-check'
   | 'sparkles'
   | 'star'
   | 'terminal'
   | 'user'
-  | 'x';
+  | 'x'
+  | 'zap';
 
 const ICONS: Record<IconName, LucideIconData> = {
+  activity: Activity,
   'alert-triangle': AlertTriangle,
+  'book-open': BookOpen,
   check: Check,
   'chevron-right': ChevronRight,
   command: Command,
+  database: Database,
+  'file-code': FileCode,
   'file-text': FileText,
+  'git-branch': GitBranch,
+  github: Github,
   'globe-2': Globe2,
   'loader-circle': LoaderCircle,
   'log-in': LogIn,
   'log-out': LogOut,
   search: Search,
   shield: Shield,
+  'shield-check': ShieldCheck,
   sparkles: Sparkles,
   star: Star,
   terminal: Terminal,
   user: User,
   x: X,
+  zap: Zap,
 };
 
 @Component({

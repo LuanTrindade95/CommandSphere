@@ -6,8 +6,10 @@ import { catchError, of } from 'rxjs';
 
 import { CommandResult } from '@app/core/api/api.models';
 import { AnalyticsService } from '@app/core/analytics/analytics.service';
+import { AuthService } from '@app/core/auth/auth.service';
 import { CatalogService } from '@app/core/catalog/catalog.service';
 import { FavoriteService } from '@app/core/favorites/favorite.service';
+import { SeoService } from '@app/core/seo/seo.service';
 import { UiBadgeComponent } from '@app/shared/ui/badge/ui-badge.component';
 import { UiButtonComponent } from '@app/shared/ui/button/ui-button.component';
 import { UiCodeBlockComponent } from '@app/shared/ui/code-block/ui-code-block.component';
@@ -78,9 +80,11 @@ import { UiSkeletonComponent } from '@app/shared/ui/skeleton/ui-skeleton.compone
 })
 export class CommandPageComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
   private readonly catalog = inject(CatalogService);
   private readonly analytics = inject(AnalyticsService);
   private readonly favorites = inject(FavoriteService);
+  private readonly seo = inject(SeoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly params = toSignal(this.route.paramMap);
 
@@ -91,7 +95,10 @@ export class CommandPageComponent {
   protected readonly parameterRows = computed(() => (this.command()?.parameters ?? []).map((parameter) => JSON.stringify(parameter)));
 
   constructor() {
-    this.favorites.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    if (this.auth.isAuthenticated()) {
+      this.favorites.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    }
+
     effect(() => this.load(this.slug()));
   }
 
@@ -132,7 +139,22 @@ export class CommandPageComponent {
       }
 
       this.command.set(response.data);
-      this.analytics.recordCommandView(response.data.slug).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+      this.seo.update({
+        title: `${response.data.name} - Comando CommandSphere`,
+        description: response.data.description ?? `Sintaxe e parâmetros do comando ${response.data.name}.`,
+        canonicalPath: `/commands/${response.data.slug}`,
+        type: 'article',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareSourceCode',
+          name: response.data.name,
+          description: response.data.description ?? response.data.syntax,
+          programmingLanguage: 'Command',
+        },
+      });
+      if (this.auth.isAuthenticated()) {
+        this.analytics.recordCommandView(response.data.slug).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+      }
     });
   }
 }

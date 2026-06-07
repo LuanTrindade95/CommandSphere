@@ -103,26 +103,74 @@
     "unknownPlugin": "Plugin"
   },
   "home": {
-    "badge": "Frontend foundation",
-    "codePreview": "/blood balance <player>\n/blood grant --amount <value>",
-    "foundationStatus": "Foundation status",
-    "ready": "Ready",
-    "stack": {
-      "angular": {
-        "description": "Lazy routes, SSR, hydration, and local state through signals.",
-        "title": "Angular SSR"
+    "badge": "Technical portfolio · SaaS developer tools",
+    "featuresBadge": "Product",
+    "featuresTitle": "An operational hub for living documentation",
+    "heroImageAlt": "CommandSphere dark-first interface with search and structured documentation",
+    "metrics": {
+      "idempotent": {
+        "label": "Pipeline with natural-key upserts and re-sync reconciliation.",
+        "value": "Idempotent ingestion"
       },
-      "laravel": {
-        "description": "Typed client for authentication, permissions, and realtime search.",
-        "title": "Secure API"
+      "permissions": {
+        "label": "Community-scoped RBAC with Spatie Permission and Laravel policies.",
+        "value": "Community scope"
       },
-      "search": {
-        "description": "Debounced command palette connected to the Meilisearch index.",
-        "title": "Fast discovery"
+      "realtime": {
+        "label": "Horizon + Reverb updating ingestion runs without refresh.",
+        "value": "Realtime operations"
       }
     },
-    "summary": "A dark-first base for navigating communities, authenticating through the API, and searching commands without building the catalog or viewer yet.",
-    "title": "Operational console for plugin documentation"
+    "pipelineBadge": "Pipeline",
+    "pipelineTitle": "GitHub → parser → index → search",
+    "primaryCta": "Explore search",
+    "screenshots": {
+      "docsAlt": "Doc viewer with sanitized markdown, side index, and version selector",
+      "docsTitle": "Doc viewer",
+      "paletteAlt": "Command palette with results from Meilisearch",
+      "paletteTitle": "Command palette",
+      "searchAlt": "Global search with facets by community, plugin, and category",
+      "searchTitle": "Faceted search"
+    },
+    "screenshotsBadge": "Real screenshots",
+    "screenshotsTitle": "Final product interface",
+    "secondaryCta": "Open catalog",
+    "stackBadge": "Stack",
+    "stackTitle": "Full stack architecture used in the project",
+    "summary": "All your documentation. In one ecosystem. CommandSphere ingests GitHub Markdown, extracts commands, indexes them in Meilisearch, and delivers fast discovery with SSR, i18n, permissions, and realtime.",
+    "title": "All your documentation. In one ecosystem.",
+    "features": {
+      "discovery": {
+        "description": "Realtime search, facets by community/plugin/category, command palette, and command pages with analytics.",
+        "title": "Fast discovery"
+      },
+      "ingestion": {
+        "description": "GitHub API with ETag, CommonMark parser, structured documents, and commands extracted by explicit convention.",
+        "title": "Reliable ingestion"
+      },
+      "operations": {
+        "description": "Manual sync, GitHub webhook, scheduler, Horizon, Reverb, and structured logs to operate the pipeline.",
+        "title": "Observable operations"
+      }
+    },
+    "pipeline": {
+      "github": {
+        "description": "Reads .md files by branch while respecting ETag and rate limits.",
+        "title": "GitHub API"
+      },
+      "index": {
+        "description": "Persists documents/commands and updates Meilisearch with facets.",
+        "title": "Index"
+      },
+      "parser": {
+        "description": "CommonMark + frontmatter/heading convention extract commands without fragile heuristics.",
+        "title": "Parser"
+      },
+      "search": {
+        "description": "Angular SSR consumes focused APIs for search, docs, favorites, and analytics.",
+        "title": "Search"
+      }
+    }
   },
   "palette": {
     "ariaLabel": "Command palette",
@@ -161,6 +209,7 @@
       "adminIngestions": "Ingestions",
       "adminPlugins": "Plugins",
       "analytics": "Analytics",
+      "catalog": "Catalog",
       "favorites": "Favorites",
       "search": "Search"
     },

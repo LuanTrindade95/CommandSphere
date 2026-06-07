@@ -190,6 +190,7 @@ services:
       dockerfile: ../docker/frontend.Dockerfile
     environment:
       NODE_ENV: development
+      COMMANDSPHERE_API_INTERNAL_URL: http://backend:8000/api/v1
       COMMANDSPHERE_REVERB_APP_KEY: ${REVERB_APP_KEY}
       COMMANDSPHERE_REVERB_HOST: localhost
       COMMANDSPHERE_REVERB_PORT: 8080
