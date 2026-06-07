@@ -83,7 +83,7 @@ export interface CommandResult {
   syntax: string;
   description: string | null;
   aliases: string[];
-  parameters: unknown[];
+  parameters: Record<string, unknown> | unknown[] | null;
   category: CommandCategory | null;
   plugin: CommandPlugin | null;
   plugin_version: CommandPluginVersion | null;

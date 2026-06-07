@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+@source './app/**/*.ts';
+@source './index.html';
+
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;

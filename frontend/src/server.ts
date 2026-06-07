@@ -1,5 +1,6 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine, isMainModule } from '@angular/ssr/node';
+import compression from 'compression';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,8 @@ const app = express();
 const commonEngine = new CommonEngine({
   allowedHosts: ['localhost', '127.0.0.1'],
 });
+
+app.use(compression());
 
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -67,12 +70,12 @@ if (isMainModule(import.meta.url)) {
 export default app;
 
 function postProcessSsr(html: string, requestUrl: string): string {
-  return delayPublicHydration(withJsonLd(html, requestUrl), requestUrl);
+  return withJsonLd(html, requestUrl);
 }
 
 function withJsonLd(html: string, requestUrl: string): string {
   const url = new URL(requestUrl);
-  const isCommandPage = url.pathname.startsWith('/commands/');
+  const isCommandPage = url.pathname.startsWith('/commands/') || url.pathname.includes('/commands/');
   const shouldReplaceCommandSchema = isCommandPage && !html.includes('SoftwareSourceCode');
 
   if (!shouldReplaceCommandSchema && html.includes('application/ld+json')) {
@@ -138,29 +141,4 @@ function extractTitle(html: string): string | null {
 
 function extractDescription(html: string): string | null {
   return /<meta name="description" content="([^"]*)"/i.exec(html)?.[1] ?? null;
-}
-
-function delayPublicHydration(html: string, requestUrl: string): string {
-  const url = new URL(requestUrl);
-  const isPublicPortfolioPage = url.pathname === '/' || /^\/c\/[^/]+\/p\/[^/]+\/?$/.test(url.pathname);
-
-  if (!isPublicPortfolioPage || !html.includes('</body>')) {
-    return html;
-  }
-
-  const scriptSources: string[] = [];
-  const withoutModuleScripts = html.replace(/<script src="([^"]+\.js)" type="module"><\/script>/g, (_match, source: string) => {
-    scriptSources.push(source);
-
-    return '';
-  });
-
-  if (scriptSources.length === 0) {
-    return html;
-  }
-
-  const withoutModulePreloads = withoutModuleScripts.replace(/<link rel="modulepreload" href="[^"]+\.js">/g, '');
-  const loader = `<script>addEventListener('load',()=>{for(const s of ${JSON.stringify(scriptSources)}){const e=document.createElement('script');e.type='module';e.src=s;document.body.appendChild(e);}});</script>`;
-
-  return withoutModulePreloads.replace('</body>', `${loader}</body>`);
 }

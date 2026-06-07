@@ -30,9 +30,9 @@ interface IngestionRunStatusChangedPayload {
       @if (runs().length === 0) {
         <app-ui-empty-state icon="terminal" [title]="'admin.ingestions.emptyTitle' | transloco" [description]="'admin.ingestions.emptyDescription' | transloco" />
       } @else {
-        <div class="grid gap-3">
+        <div class="grid min-w-0 gap-3">
           @for (run of runs(); track run.id) {
-            <article class="grid gap-3 rounded-lg border border-white/10 bg-surface-dark/72 p-4">
+            <article class="grid min-w-0 gap-3 rounded-lg border border-white/10 bg-surface-dark/72 p-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                   <app-ui-badge [tone]="run.status === 'success' ? 'success' : run.status === 'failed' ? 'danger' : 'neutral'">{{ run.status }}</app-ui-badge>
@@ -40,8 +40,8 @@ interface IngestionRunStatusChangedPayload {
                 </div>
                 <span class="text-sm text-neutral-gray">{{ run.finished_at ?? run.started_at }}</span>
               </div>
-              <pre class="overflow-x-auto rounded-md border border-white/10 bg-deep-space p-3 text-xs leading-6 text-neutral-gray">{{ stringify(run.stats) }}</pre>
-              <pre class="overflow-x-auto rounded-md border border-white/10 bg-deep-space p-3 text-xs leading-6 text-neutral-gray">{{ stringify(run.log) }}</pre>
+              <pre class="max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/10 bg-deep-space p-3 text-xs leading-6 text-neutral-gray">{{ stringify(run.stats) }}</pre>
+              <pre class="max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/10 bg-deep-space p-3 text-xs leading-6 text-neutral-gray">{{ stringify(run.log) }}</pre>
             </article>
           }
         </div>

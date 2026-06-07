@@ -17,10 +17,10 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
   standalone: true,
   imports: [CommandPaletteComponent, RouterLink, RouterOutlet, TranslocoPipe, UiButtonComponent, UiIconComponent, UiToastContainerComponent],
   template: `
-    <main class="min-h-screen bg-deep-space text-slate-100">
-      <div class="mx-auto grid min-h-screen w-full max-w-7xl grid-rows-[auto_1fr] px-4 sm:px-6">
-        <header class="sticky top-0 z-30 border-b border-white/10 bg-deep-space/92 py-3 backdrop-blur">
-          <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+    <main class="min-h-screen overflow-x-hidden bg-deep-space text-slate-100">
+      <div class="mx-auto grid min-h-screen w-full min-w-0 max-w-7xl grid-rows-[auto_1fr] px-4 sm:px-6">
+        <header class="sticky top-0 z-30 min-w-0 border-b border-white/10 bg-deep-space/92 py-3 backdrop-blur">
+          <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
             <a class="grid min-w-0 grid-cols-[auto_1fr] items-center gap-3" routerLink="/">
               <span class="grid h-9 w-9 place-items-center rounded-md bg-electric-purple text-white shadow-command-glow">
                 <app-ui-icon name="sparkles" [size]="18" />
@@ -44,7 +44,7 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
               </kbd>
             </button>
 
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex min-w-0 items-center justify-end gap-2">
               @if (loading.isLoading()) {
                 <app-ui-icon class="text-neon-cyan" name="loader-circle" [size]="18" [spin]="true" />
               }
@@ -75,7 +75,7 @@ import { UiToastContainerComponent } from '@app/shared/ui/toast/ui-toast-contain
             </div>
           </div>
 
-          <nav class="mt-3 flex min-h-9 gap-2 overflow-x-auto">
+          <nav class="mt-3 flex min-h-9 max-w-full gap-2 overflow-x-auto">
             @if (auth.communities().length > 0) {
               @for (community of auth.communities(); track community.slug) {
                 <a

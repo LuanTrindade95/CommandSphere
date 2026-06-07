@@ -1,4 +1,5 @@
-import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { isPlatformBrowser, isPlatformServer } from '@angular/common';
+import { Component, computed, DestroyRef, effect, inject, makeStateKey, PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -30,48 +31,48 @@ import { UiSkeletonComponent } from '@app/shared/ui/skeleton/ui-skeleton.compone
       } @else {
         @if (command(); as item) {
           <header class="grid gap-4 rounded-lg border border-white/10 bg-surface-dark/72 p-5">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="grid gap-2">
-              <div class="flex flex-wrap gap-2">
-                <app-ui-badge tone="cyan">{{ item.plugin?.name ?? ('command.unknownPlugin' | transloco) }}</app-ui-badge>
-                @if (item.category) {
-                  <app-ui-badge tone="purple">{{ item.category.name }}</app-ui-badge>
-                }
-                <app-ui-badge tone="neutral">{{ 'command.views' | transloco: { count: item.views } }}</app-ui-badge>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="grid gap-2">
+                <div class="flex flex-wrap gap-2">
+                  <app-ui-badge tone="cyan">{{ item.plugin?.name ?? ('command.unknownPlugin' | transloco) }}</app-ui-badge>
+                  @if (item.category) {
+                    <app-ui-badge tone="purple">{{ item.category.name }}</app-ui-badge>
+                  }
+                  <app-ui-badge tone="neutral">{{ 'command.views' | transloco: { count: item.views } }}</app-ui-badge>
+                </div>
+                <h1 class="font-display text-3xl font-semibold text-white">{{ item.name }}</h1>
+                <p class="max-w-3xl text-sm leading-6 text-neutral-gray">{{ item.description ?? ('command.noDescription' | transloco) }}</p>
               </div>
-              <h1 class="font-display text-3xl font-semibold text-white">{{ item.name }}</h1>
-              <p class="max-w-3xl text-sm leading-6 text-neutral-gray">{{ item.description ?? ('command.noDescription' | transloco) }}</p>
+              <app-ui-button variant="secondary" (click)="toggleFavorite(item)">
+                <app-ui-icon name="star" [size]="16" />
+                {{ favoriteLabel(item.id) | transloco }}
+              </app-ui-button>
             </div>
-            <app-ui-button variant="secondary" (click)="toggleFavorite(item)">
-              <app-ui-icon name="star" [size]="16" />
-              {{ favoriteLabel(item.id) | transloco }}
-            </app-ui-button>
-          </div>
-          <app-ui-code-block [code]="item.syntax" />
-        </header>
+            <app-ui-code-block [code]="item.syntax" />
+          </header>
 
-        <div class="grid gap-5 lg:grid-cols-2">
-          <section class="rounded-lg border border-white/10 bg-surface-dark/72 p-5">
-            <h2 class="font-display text-lg font-semibold text-white">{{ 'command.aliasesTitle' | transloco }}</h2>
-            <div class="mt-4 flex flex-wrap gap-2">
-              @for (alias of item.aliases; track alias) {
-                <app-ui-badge tone="neutral">{{ alias }}</app-ui-badge>
-              } @empty {
-                <span class="text-sm text-neutral-gray">{{ 'command.aliasesEmpty' | transloco }}</span>
-              }
-            </div>
-          </section>
+          <div class="grid gap-5 lg:grid-cols-2">
+            <section class="rounded-lg border border-white/10 bg-surface-dark/72 p-5">
+              <h2 class="font-display text-lg font-semibold text-white">{{ 'command.aliasesTitle' | transloco }}</h2>
+              <div class="mt-4 flex flex-wrap gap-2">
+                @for (alias of item.aliases; track alias) {
+                  <app-ui-badge tone="neutral">{{ alias }}</app-ui-badge>
+                } @empty {
+                  <span class="text-sm text-neutral-gray">{{ 'command.aliasesEmpty' | transloco }}</span>
+                }
+              </div>
+            </section>
 
-          <section class="rounded-lg border border-white/10 bg-surface-dark/72 p-5">
-            <h2 class="font-display text-lg font-semibold text-white">{{ 'command.parametersTitle' | transloco }}</h2>
-            <div class="mt-4 grid gap-2">
-              @for (parameter of parameterRows(); track parameter) {
-                <code class="rounded-md border border-white/10 bg-deep-space px-3 py-2 text-sm text-neutral-gray">{{ parameter }}</code>
-              } @empty {
-                <span class="text-sm text-neutral-gray">{{ 'command.parametersEmpty' | transloco }}</span>
-              }
-            </div>
-          </section>
+            <section class="rounded-lg border border-white/10 bg-surface-dark/72 p-5">
+              <h2 class="font-display text-lg font-semibold text-white">{{ 'command.parametersTitle' | transloco }}</h2>
+              <div class="mt-4 grid gap-2">
+                @for (parameter of parameterRows(); track parameter) {
+                  <code class="rounded-md border border-white/10 bg-deep-space px-3 py-2 text-sm text-neutral-gray">{{ parameter }}</code>
+                } @empty {
+                  <span class="text-sm text-neutral-gray">{{ 'command.parametersEmpty' | transloco }}</span>
+                }
+              </div>
+            </section>
           </div>
         }
       }
@@ -86,13 +87,27 @@ export class CommandPageComponent {
   private readonly favorites = inject(FavoriteService);
   private readonly seo = inject(SeoService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly transferState = inject(TransferState);
   private readonly params = toSignal(this.route.paramMap);
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   protected readonly command = signal<CommandResult | null>(null);
   protected readonly slug = computed(() => this.params()?.get('slug') ?? '');
-  protected readonly parameterRows = computed(() => (this.command()?.parameters ?? []).map((parameter) => JSON.stringify(parameter)));
+  protected readonly parameterRows = computed(() => {
+    const parameters = this.command()?.parameters;
+
+    if (Array.isArray(parameters)) {
+      return parameters.map((parameter) => JSON.stringify(parameter));
+    }
+
+    if (parameters !== null && typeof parameters === 'object') {
+      return Object.entries(parameters).map(([name, parameter]) => `${name}: ${JSON.stringify(parameter)}`);
+    }
+
+    return [];
+  });
 
   constructor() {
     if (this.auth.isAuthenticated()) {
@@ -122,6 +137,21 @@ export class CommandPageComponent {
       return;
     }
 
+    const stateKey = makeStateKey<CommandResult>(`command:${slug}`);
+
+    if (isPlatformBrowser(this.platformId) && this.transferState.hasKey(stateKey)) {
+      const command = this.transferState.get(stateKey, null);
+
+      if (command !== null) {
+        this.transferState.remove(stateKey);
+        this.loading.set(false);
+        this.error.set(false);
+        this.applyCommand(command);
+
+        return;
+      }
+    }
+
     this.loading.set(true);
     this.error.set(false);
 
@@ -138,23 +168,32 @@ export class CommandPageComponent {
         return;
       }
 
-      this.command.set(response.data);
-      this.seo.update({
-        title: `${response.data.name} - Comando CommandSphere`,
-        description: response.data.description ?? `Sintaxe e parâmetros do comando ${response.data.name}.`,
-        canonicalPath: `/commands/${response.data.slug}`,
-        type: 'article',
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@type': 'SoftwareSourceCode',
-          name: response.data.name,
-          description: response.data.description ?? response.data.syntax,
-          programmingLanguage: 'Command',
-        },
-      });
-      if (this.auth.isAuthenticated()) {
-        this.analytics.recordCommandView(response.data.slug).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+      if (isPlatformServer(this.platformId)) {
+        this.transferState.set(stateKey, response.data);
       }
+
+      this.applyCommand(response.data);
     });
+  }
+
+  private applyCommand(command: CommandResult): void {
+    this.command.set(command);
+    this.seo.update({
+      title: `${command.name} - Comando CommandSphere`,
+      description: command.description ?? `Sintaxe e parametros do comando ${command.name}.`,
+      canonicalPath: `/commands/${command.slug}`,
+      type: 'article',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareSourceCode',
+        name: command.name,
+        description: command.description ?? command.syntax,
+        programmingLanguage: 'Command',
+      },
+    });
+
+    if (this.auth.isAuthenticated()) {
+      this.analytics.recordCommandView(command.slug).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    }
   }
 }
