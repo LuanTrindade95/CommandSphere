@@ -2,7 +2,7 @@
 
 ## Discord OAuth credentials
 
-Arthur must configure the Discord OAuth application credentials in `backend/.env` before using the real OAuth flow:
+The environment operator must configure the Discord OAuth application credentials in `backend/.env` before using the real OAuth flow:
 
 ```env
 DISCORD_CLIENT_ID=

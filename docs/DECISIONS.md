@@ -88,7 +88,7 @@ O MVP define Discord OAuth2 como fluxo real de login e Sanctum como mecanismo de
 Implementar `/api/v1/auth/discord/redirect` e `/api/v1/auth/discord/callback` com Socialite em modo stateless. O callback persiste `discord_id`, `username` e `avatar`, associa o usuário à comunidade default como `member` no MVP e emite token Sanctum. O mapeamento automático por guild fica como extensão futura, pois depende de permissões e configuração operacional no Discord.
 
 ### Consequências
-O backend fica pronto para o fluxo OAuth real sem depender de sessão server-side. Tokens são revogáveis via `/api/v1/auth/logout`. Arthur deve configurar `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` e `DISCORD_REDIRECT_URI` no `.env`; esses valores não entram no repositório.
+O backend fica pronto para o fluxo OAuth real sem depender de sessão server-side. Tokens são revogáveis via `/api/v1/auth/logout`. O operador do ambiente deve configurar `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` e `DISCORD_REDIRECT_URI` no `.env`; esses valores não entram no repositório.
 
 ## ADR-08 — Dev-login local/testing para desbloquear pipeline
 

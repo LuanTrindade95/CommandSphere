@@ -14,7 +14,7 @@ import { IconName, UiIconComponent } from '@app/shared/ui/icon/ui-icon.component
     <section class="relative isolate grid min-h-[calc(100vh-7rem)] content-center overflow-hidden py-10">
       <div class="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_top_left,rgb(124_58_237_/_22%),transparent_34%),linear-gradient(180deg,rgb(2_6_23),rgb(2_6_23_/_82%))]"></div>
       <img
-        class="absolute inset-x-0 bottom-0 -z-10 hidden h-[58%] w-full object-cover opacity-34 mix-blend-screen sm:block"
+        class="absolute inset-x-0 bottom-0 -z-10 hidden h-[58%] w-full object-cover opacity-34 mix-blend-screen md:block"
         src="/portfolio/landing-hero.png"
         width="1200"
         height="675"

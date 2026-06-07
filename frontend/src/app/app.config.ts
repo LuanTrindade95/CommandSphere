@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideClientHydration } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 
@@ -18,7 +18,7 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([loadingInterceptor, authInterceptor, errorInterceptor]),
     ),
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(),
     provideTransloco({
       config: {
         availableLangs: ['pt-BR', 'en'],

@@ -63,7 +63,7 @@ Cores: Deep Space #020617, Surface Dark #111827, Electric Purple #7C3AED, Neon C
 - Rate limit / mudança da GitHub API — mitigar com token + ETag + tratamento de 403/409.
 - Meilisearch em Docker (host/porta/master key) — mitigar com smoke de indexação+busca.
 - SSR + auth/i18n (hidratação, vazamento de estado entre requests no server) — mitigar com TransferState e providers por request.
-- Discord OAuth em dev (redirect URI, secrets) — AÇÃO HUMANA: Arthur configura credenciais no .env; testes usam fake provider.
+- Discord OAuth em dev (redirect URI, secrets) — AÇÃO HUMANA: operador do ambiente configura credenciais no .env; testes usam fake provider.
 
 ## Localização (pt-BR)
 Idioma do produto: português (Brasil), com i18n via Transloco. LOCALE PADRÃO = pt-BR (en como secundário, troca em runtime).
