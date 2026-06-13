@@ -55,8 +55,13 @@ class AnalyticsController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $maxDays = (int) config('commandsphere.analytics.max_period_days', 365);
+        $validated = $request->validate([
+            'days' => ['sometimes', 'integer', 'min:1', 'max:'.$maxDays],
+        ]);
+        $days = (int) ($validated['days'] ?? 30);
         $communityIds = $this->analyticsCommunityIds($request, $access, $user);
-        $periodStartedAt = now()->subDays((int) $request->integer('days', 30));
+        $periodStartedAt = now()->subDays($days);
 
         $rows = CommandView::query()
             ->select('command_id', DB::raw('count(*) as views_count'))
@@ -80,6 +85,8 @@ class AnalyticsController extends Controller
         return response()->json([
             'data' => CommandResource::collection($commands)->resolve($request),
             'meta' => [
+                'days' => $days,
+                'max_days' => $maxDays,
                 'period_started_at' => $periodStartedAt->toISOString(),
             ],
         ]);

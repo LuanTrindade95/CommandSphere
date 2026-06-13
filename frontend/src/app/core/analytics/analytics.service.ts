@@ -7,6 +7,8 @@ import { API_BASE_URL } from '@app/core/api/api.tokens';
 
 export interface AnalyticsResponse extends ApiCollection<CommandResult> {
   meta: {
+    days: number;
+    max_days: number;
     period_started_at: string;
   };
 }

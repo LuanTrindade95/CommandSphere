@@ -152,3 +152,12 @@ Latest ingestion hardening phase:
 - `IngestionService::start()` reuses active `queued/running` runs unless forced.
 - `RunPluginVersionIngestion` is unique per plugin version for one hour.
 - Admin ingestion listing now scopes communities in SQL and returns pagination metadata.
+
+Active analytics remediation branch: `fix/analytics-bounds`.
+
+Latest analytics hardening phase:
+
+- F-005 analytics period bounds.
+- `/api/v1/analytics/most-viewed` now validates `days` as integer `1..COMMANDSPHERE_ANALYTICS_MAX_DAYS`.
+- Analytics response metadata now includes `days` and `max_days`.
+- Local tests isolate command-view dedupe from Meilisearch when search indexing is not the behavior under test.

@@ -16,5 +16,6 @@ return [
 
     'analytics' => [
         'view_dedupe_minutes' => env('COMMANDSPHERE_VIEW_DEDUPE_MINUTES', 10),
+        'max_period_days' => env('COMMANDSPHERE_ANALYTICS_MAX_DAYS', 365),
     ],
 ];

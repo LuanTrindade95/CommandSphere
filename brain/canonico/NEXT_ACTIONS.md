@@ -120,6 +120,8 @@ Risks:
 
 Problem: Analytics period is unbounded and system telemetry is mostly implicit in `IngestionRun.log`.
 
+Status: Analytics period bounds implemented in branch `fix/analytics-bounds`. Broader structured telemetry/correlation IDs remain a future observability phase.
+
 Recommended direction:
 
 - Validate analytics `days` with a product cap.
@@ -128,7 +130,7 @@ Recommended direction:
 
 Acceptance criteria:
 
-- Analytics rejects invalid periods and caps expensive windows.
+- Analytics rejects invalid periods and caps expensive windows. `VALIDATED` by `DiscoveryApiTest`.
 - Logs/events include correlation IDs and relevant domain IDs.
 - Ingestion run detail can be debugged without server-log archaeology.
 

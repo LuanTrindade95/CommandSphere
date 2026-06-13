@@ -379,6 +379,7 @@ it('creates lists and removes polymorphic favorites', function (): void {
 
 it('deduplicates command views inside the short analytics window', function (): void {
     $graph = discoveryGraph();
+    config(['scout.driver' => 'null']);
     $token = $graph['user']->createToken('views-test')->plainTextToken;
 
     $this
@@ -416,5 +417,30 @@ it('returns most viewed commands for communities with analytics permission', fun
         ->getJson('/api/v1/analytics/most-viewed?community=celem-ecosystem')
         ->assertOk()
         ->assertJsonPath('data.0.slug', 'ban-player')
-        ->assertJsonPath('data.0.views', 3);
+        ->assertJsonPath('data.0.views', 3)
+        ->assertJsonPath('meta.days', 30)
+        ->assertJsonPath('meta.max_days', 365);
+});
+
+it('validates analytics period bounds', function (): void {
+    $graph = discoveryGraph();
+    $token = $graph['user']->createToken('analytics-bounds-test')->plainTextToken;
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/analytics/most-viewed?community=celem-ecosystem&days=0')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['days']);
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/analytics/most-viewed?community=celem-ecosystem&days=366')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['days']);
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/analytics/most-viewed?community=celem-ecosystem&days=abc')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['days']);
 });

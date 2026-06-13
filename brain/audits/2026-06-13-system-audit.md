@@ -12,6 +12,8 @@ Remediation update: F-003 was configured in branch `fix/ci-service-gates`. The C
 
 Remediation update: F-004 and F-007 were addressed in branch `fix/ingestion-run-controls`. The fix scopes ingestion run listing in SQL, adds pagination metadata, records run source, reuses active queued/running runs, and makes ingestion jobs unique per plugin version.
 
+Remediation update: F-005 was addressed in branch `fix/analytics-bounds`. The analytics endpoint now validates `days`, caps the period with `COMMANDSPHERE_ANALYTICS_MAX_DAYS`, and returns the accepted period in metadata.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -143,6 +145,8 @@ Fix before ingestion history becomes large or multi-community usage expands.
 ### F-005 - Analytics Period Is Unbounded
 
 Severity: Medium
+
+Status: Mitigated in `fix/analytics-bounds`.
 
 Evidence:
 
