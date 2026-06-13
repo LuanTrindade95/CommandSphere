@@ -17,7 +17,8 @@ class IngestionRunFactory extends Factory
 
         return [
             'plugin_version_id' => PluginVersion::factory(),
-            'status' => fake()->randomElement(['completed', 'failed']),
+            'source' => fake()->randomElement(['manual', 'webhook', 'scheduled']),
+            'status' => fake()->randomElement(['success', 'partial', 'failed']),
             'stats' => [
                 'documents_seen' => fake()->numberBetween(4, 16),
                 'commands_detected' => fake()->numberBetween(8, 35),

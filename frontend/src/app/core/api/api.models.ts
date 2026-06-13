@@ -133,6 +133,7 @@ export interface FavoriteResource {
 export interface IngestionRunResource {
   id: number;
   plugin_version_id: number;
+  source?: 'manual' | 'webhook' | 'scheduled' | string;
   status: 'queued' | 'running' | 'success' | 'partial' | 'failed' | string;
   stats: Record<string, unknown> | null;
   log: Record<string, unknown> | unknown[] | null;
@@ -162,6 +163,7 @@ export interface PluginCreatePayload {
 
 export interface PluginSyncResponse {
   ingestion_run: IngestionRunResource;
+  queued: boolean;
 }
 
 export interface SearchResponse {

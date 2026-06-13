@@ -28,20 +28,38 @@ class IngestionService
         private readonly DiscoveryCache $cache,
     ) {}
 
-    public function start(PluginVersion $pluginVersion): IngestionRun
+    public function start(PluginVersion $pluginVersion, string $source = 'manual', bool $force = false): IngestionRun
     {
-        $run = IngestionRun::query()->create([
-            'plugin_version_id' => $pluginVersion->id,
-            'status' => 'queued',
-            'stats' => [
-                'docs_parsed' => 0,
-                'commands_extracted' => 0,
-                'warnings' => 0,
-            ],
-            'log' => [],
-        ]);
+        $run = DB::transaction(function () use ($pluginVersion, $source, $force): IngestionRun {
+            if (! $force) {
+                $existingRun = IngestionRun::query()
+                    ->where('plugin_version_id', $pluginVersion->id)
+                    ->whereIn('status', ['queued', 'running'])
+                    ->lockForUpdate()
+                    ->latest('id')
+                    ->first();
 
-        IngestionRunStatusChanged::dispatch($run);
+                if ($existingRun !== null) {
+                    return $existingRun;
+                }
+            }
+
+            return IngestionRun::query()->create([
+                'plugin_version_id' => $pluginVersion->id,
+                'source' => $source,
+                'status' => 'queued',
+                'stats' => [
+                    'docs_parsed' => 0,
+                    'commands_extracted' => 0,
+                    'warnings' => 0,
+                ],
+                'log' => [],
+            ]);
+        });
+
+        if ($run->wasRecentlyCreated) {
+            IngestionRunStatusChanged::dispatch($run);
+        }
 
         return $run;
     }

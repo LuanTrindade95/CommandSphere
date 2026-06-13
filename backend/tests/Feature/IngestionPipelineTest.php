@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\Event;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    config([
+        'queue.default' => 'sync',
+        'scout.driver' => 'null',
+    ]);
+
     Event::fake([
         CommandIndexUpdated::class,
         IngestionRunStatusChanged::class,

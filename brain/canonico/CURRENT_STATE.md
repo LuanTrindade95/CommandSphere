@@ -141,3 +141,14 @@ Latest CI hardening phase:
 - Backend CI runs `composer audit`, Pint, and Pest with explicit testing environment variables.
 - Frontend CI now runs `npm audit --audit-level=critical` before SSR build.
 - Meilisearch readiness is checked with a bounded wait loop before backend dependency/test steps.
+
+Active ingestion remediation branch: `fix/ingestion-run-controls`.
+
+Latest ingestion hardening phase:
+
+- F-004 ingestion run list scoping/pagination.
+- F-007 duplicate ingestion enqueue prevention.
+- Ingestion runs now record source: `manual`, `webhook`, or `scheduled`.
+- `IngestionService::start()` reuses active `queued/running` runs unless forced.
+- `RunPluginVersionIngestion` is unique per plugin version for one hour.
+- Admin ingestion listing now scopes communities in SQL and returns pagination metadata.

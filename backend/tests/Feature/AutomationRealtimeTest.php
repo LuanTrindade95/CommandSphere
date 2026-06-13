@@ -140,8 +140,28 @@ it('dispatches ingestion from a github webhook with a valid signature', function
     $run = IngestionRun::query()->firstOrFail();
 
     expect($run->status)->toBe('success')
+        ->and($run->source)->toBe('webhook')
         ->and($run->stats['docs_parsed'])->toBe(1)
         ->and($run->stats['commands_extracted'])->toBe(1);
+});
+
+it('does not enqueue a duplicate ingestion while one is already active', function (): void {
+    $graph = createAutomationPluginGraph();
+    $existingRun = IngestionRun::factory()->create([
+        'plugin_version_id' => $graph['version']->id,
+        'source' => 'manual',
+        'status' => 'running',
+    ]);
+    $token = $graph['admin']->createToken('sync-duplicate-test')->plainTextToken;
+
+    $this
+        ->withToken($token)
+        ->postJson('/api/v1/plugins/'.$graph['plugin']->id.'/sync')
+        ->assertOk()
+        ->assertJsonPath('queued', false)
+        ->assertJsonPath('ingestion_run.id', $existingRun->id);
+
+    expect(IngestionRun::query()->count())->toBe(1);
 });
 
 it('rejects a github webhook with an invalid signature', function (): void {
@@ -191,9 +211,44 @@ it('scheduled sync reuses etag and does not reprocess unchanged content', functi
     $runs = IngestionRun::query()->orderBy('id')->get();
 
     expect($runs)->toHaveCount(2)
+        ->and($runs[0]->source)->toBe('scheduled')
+        ->and($runs[1]->source)->toBe('scheduled')
         ->and($runs[0]->stats['docs_parsed'])->toBe(1)
         ->and($runs[1]->stats['docs_parsed'])->toBe(0)
         ->and($runs[1]->log[0]['code'])->toBe('document_not_modified');
+});
+
+it('lists ingestion runs through scoped paginated queries', function (): void {
+    $graph = createAutomationPluginGraph();
+    $foreignCommunity = Community::factory()->create();
+    $foreignPlugin = Plugin::factory()->create(['community_id' => $foreignCommunity->id]);
+    $foreignVersion = PluginVersion::factory()->create(['plugin_id' => $foreignPlugin->id]);
+    $token = $graph['admin']->createToken('ingestion-index-test')->plainTextToken;
+
+    IngestionRun::factory()->create([
+        'plugin_version_id' => $graph['version']->id,
+        'status' => 'success',
+    ]);
+    IngestionRun::factory()->create([
+        'plugin_version_id' => $graph['version']->id,
+        'status' => 'failed',
+    ]);
+    $foreignRun = IngestionRun::factory()->create([
+        'plugin_version_id' => $foreignVersion->id,
+        'status' => 'success',
+    ]);
+
+    $response = $this
+        ->withToken($token)
+        ->getJson('/api/v1/ingestions?per_page=1');
+
+    $response
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('meta.per_page', 1)
+        ->assertJsonPath('meta.total', 2);
+
+    expect(collect($response->json('data'))->pluck('id'))->not->toContain($foreignRun->id);
 });
 
 it('denies private community broadcast channel access without scoped permission', function (): void {

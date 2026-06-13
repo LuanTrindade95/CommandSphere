@@ -10,6 +10,8 @@ Remediation update: F-002 was addressed in branch `fix/oauth-state-hardening`. T
 
 Remediation update: F-003 was configured in branch `fix/ci-service-gates`. The CI workflow now provisions MySQL, Redis, and Meilisearch services, runs backend/frontend dependency audits, and executes Pest with explicit testing service environment variables. Final validation depends on the next GitHub Actions run.
 
+Remediation update: F-004 and F-007 were addressed in branch `fix/ingestion-run-controls`. The fix scopes ingestion run listing in SQL, adds pagination metadata, records run source, reuses active queued/running runs, and makes ingestion jobs unique per plugin version.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -117,6 +119,8 @@ Fix before relying on CI for release confidence.
 
 Severity: Medium-High
 
+Status: Mitigated in `fix/ingestion-run-controls`.
+
 Evidence:
 
 - `backend/app/Http/Controllers/Api/V1/IngestionController.php:19`
@@ -183,6 +187,8 @@ Fix before relying on GitHub ingestion operationally.
 ### F-007 - Duplicate Ingestion Jobs Can Be Enqueued For The Same Plugin Version
 
 Severity: Medium
+
+Status: Mitigated in `fix/ingestion-run-controls`.
 
 Evidence:
 

@@ -46,9 +46,12 @@ class GitHubWebhookController extends Controller
                     return;
                 }
 
-                $run = $service->start($pluginVersion);
-                RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
-                $queued++;
+                $run = $service->start($pluginVersion, 'webhook');
+
+                if ($run->wasRecentlyCreated) {
+                    RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
+                    $queued++;
+                }
             });
 
         return response()->json([

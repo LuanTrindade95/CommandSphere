@@ -27,9 +27,12 @@ class SyncScheduledPlugins extends Command
                     return;
                 }
 
-                $run = $service->start($pluginVersion);
-                RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
-                $queued++;
+                $run = $service->start($pluginVersion, 'scheduled');
+
+                if ($run->wasRecentlyCreated) {
+                    RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
+                    $queued++;
+                }
             });
 
         $this->components->info("Queued {$queued} scheduled plugin sync runs.");

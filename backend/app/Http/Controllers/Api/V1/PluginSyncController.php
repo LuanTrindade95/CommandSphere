@@ -20,18 +20,22 @@ class PluginSyncController extends Controller
             ->first()
             ?? $plugin->versions()->latest('id')->firstOrFail();
 
-        $run = $service->start($pluginVersion);
+        $run = $service->start($pluginVersion, 'manual');
 
-        RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
+        if ($run->wasRecentlyCreated) {
+            RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
+        }
 
         return response()->json([
             'ingestion_run' => [
                 'id' => $run->id,
                 'plugin_version_id' => $run->plugin_version_id,
+                'source' => $run->source,
                 'status' => $run->status,
                 'stats' => $run->stats,
                 'log' => $run->log,
             ],
-        ], 202);
+            'queued' => $run->wasRecentlyCreated,
+        ], $run->wasRecentlyCreated ? 202 : 200);
     }
 }

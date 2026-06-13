@@ -15,18 +15,29 @@ class IngestionController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $perPage = min(max($request->integer('per_page', 20), 1), 100);
+        $communityIds = $this->viewableCommunityIds($user);
 
         $runs = IngestionRun::query()
             ->with('pluginVersion.plugin.community')
+            ->whereHas(
+                'pluginVersion.plugin',
+                fn ($query) => $query->whereIn('community_id', $communityIds),
+            )
             ->latest('id')
-            ->get()
-            ->filter(fn (IngestionRun $run): bool => $this->canView($user, $run))
-            ->values()
-            ->map(fn (IngestionRun $run): array => $this->payload($run))
-            ->all();
+            ->paginate($perPage);
 
         return response()->json([
-            'data' => $runs,
+            'data' => $runs->getCollection()
+                ->map(fn (IngestionRun $run): array => $this->payload($run))
+                ->values()
+                ->all(),
+            'meta' => [
+                'current_page' => $runs->currentPage(),
+                'last_page' => $runs->lastPage(),
+                'per_page' => $runs->perPage(),
+                'total' => $runs->total(),
+            ],
         ]);
     }
 
@@ -56,6 +67,22 @@ class IngestionController extends Controller
     }
 
     /**
+     * @return list<int>
+     */
+    private function viewableCommunityIds(User $user): array
+    {
+        return $user->communities()
+            ->select('communities.id')
+            ->get()
+            ->filter(fn ($community): bool => $user->hasCommunityPermission($community, 'analytics.view')
+                || $user->hasCommunityPermission($community, 'ingestion.run'))
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function payload(IngestionRun $run): array
@@ -66,6 +93,7 @@ class IngestionController extends Controller
         return [
             'id' => $run->id,
             'plugin_version_id' => $run->plugin_version_id,
+            'source' => $run->source,
             'status' => $run->status,
             'stats' => $run->stats,
             'log' => $run->log,

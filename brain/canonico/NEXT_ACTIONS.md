@@ -97,6 +97,8 @@ Risks:
 
 Problem: Manual sync, scheduled sync, and webhooks can enqueue overlapping runs for the same plugin version. Ingestion run listing also loads all runs before permission filtering.
 
+Status: Implemented in branch `fix/ingestion-run-controls` for active-run dedupe, run source tracking, SQL-scoped listing, and pagination. Retry semantics remain a future enhancement.
+
 Recommended direction:
 
 - Add per-plugin-version uniqueness/locking for queued and running ingestion jobs.
@@ -106,8 +108,8 @@ Recommended direction:
 
 Acceptance criteria:
 
-- Duplicate enqueue attempts do not create overlapping jobs unless explicitly forced.
-- Admin ingestion list is paginated and scoped in the query.
+- Duplicate enqueue attempts do not create overlapping jobs unless explicitly forced. `VALIDATED` by `AutomationRealtimeTest`.
+- Admin ingestion list is paginated and scoped in the query. `VALIDATED` by `AutomationRealtimeTest`.
 - Realtime updates and historical run detail still work.
 
 Risks:
