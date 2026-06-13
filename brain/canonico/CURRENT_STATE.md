@@ -131,3 +131,13 @@ Latest OAuth hardening phase:
 - Added signed 10-minute httpOnly `commandsphere_discord_oauth_state` cookie on redirect.
 - Callback now rejects missing, tampered, mismatched, or expired OAuth state before calling Discord.
 - Callback clears the state cookie on both success and failure.
+
+Active CI remediation branch: `fix/ci-service-gates`.
+
+Latest CI hardening phase:
+
+- F-003 CI/service-backed validation hardening.
+- Backend CI now provisions MySQL, Redis, and Meilisearch service containers.
+- Backend CI runs `composer audit`, Pint, and Pest with explicit testing environment variables.
+- Frontend CI now runs `npm audit --audit-level=critical` before SSR build.
+- Meilisearch readiness is checked with a bounded wait loop before backend dependency/test steps.

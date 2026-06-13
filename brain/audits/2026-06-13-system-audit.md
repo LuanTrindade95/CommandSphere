@@ -8,6 +8,8 @@ Remediation update: F-001, F-010, and F-012 were addressed in branch `fix/runtim
 
 Remediation update: F-002 was addressed in branch `fix/oauth-state-hardening`. The fix added a first-party Discord Socialite provider, signed short-lived OAuth state cookie generation, callback state validation, state cookie cleanup, and Auth API tests for redirect, rejection, and valid callback.
 
+Remediation update: F-003 was configured in branch `fix/ci-service-gates`. The CI workflow now provisions MySQL, Redis, and Meilisearch services, runs backend/frontend dependency audits, and executes Pest with explicit testing service environment variables. Final validation depends on the next GitHub Actions run.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -82,6 +84,8 @@ Fix before public OAuth is used outside local/demo scenarios.
 ### F-003 - CI Does Not Prove Service-Backed Claims
 
 Severity: High
+
+Status: Configured in `fix/ci-service-gates`; pending remote CI execution.
 
 Evidence:
 

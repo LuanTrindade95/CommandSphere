@@ -76,6 +76,8 @@ Risks:
 
 Problem: CI currently does not define MySQL, Redis, or Meilisearch services, while important tests and product claims depend on those systems.
 
+Status: CI workflow updated in branch `fix/ci-service-gates`. Final proof is pending the next GitHub Actions run because local validation cannot execute GitHub service containers.
+
 Recommended direction:
 
 - Split fast unit tests from service-backed integration tests, or add required CI services.
@@ -84,7 +86,7 @@ Recommended direction:
 
 Acceptance criteria:
 
-- CI proves backend tests, frontend tests, SSR build, dependency audits, and service-backed search behavior.
+- CI proves backend tests, frontend tests, SSR build, dependency audits, and service-backed search behavior. `CONFIGURED`; pending remote Actions execution.
 - CI logs clearly distinguish skipped, pending, and executed integration checks.
 
 Risks:

@@ -14,6 +14,35 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: commandsphere_test
+        ports:
+          - "3306:3306"
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      meilisearch:
+        image: getmeili/meilisearch:v1.12
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: commandsphere-test-master-key
+        ports:
+          - "7700:7700"
 
     steps:
       - name: Checkout
@@ -26,9 +55,24 @@ jobs:
           extensions: bcmath, mbstring, pdo_mysql, redis, pcntl, posix, zip
           coverage: none
 
+      - name: Wait for Meilisearch
+        run: |
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:7700/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Meilisearch did not become healthy in time."
+          exit 1
+
       - name: Install dependencies
         working-directory: backend
         run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Composer audit
+        working-directory: backend
+        run: composer audit
 
       - name: Pint
         working-directory: backend
@@ -36,6 +80,22 @@ jobs:
 
       - name: Pest
         working-directory: backend
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:Fx6s3fIDiYxFNwNf0U8et7uRNwXU0kZKNjJUJt4xbnQ=
+          BCRYPT_ROUNDS: 4
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: commandsphere_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          CACHE_STORE: array
+          MAIL_MAILER: array
+          MEILISEARCH_HOST: http://127.0.0.1:7700
+          MEILISEARCH_KEY: commandsphere-test-master-key
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
         run: ./vendor/bin/pest
 
   frontend:
@@ -64,6 +124,10 @@ jobs:
       - name: Jest
         working-directory: frontend
         run: npm test -- --runInBand
+
+      - name: Dependency audit
+        working-directory: frontend
+        run: npm audit --audit-level=critical
 
       - name: Build SSR
         working-directory: frontend
