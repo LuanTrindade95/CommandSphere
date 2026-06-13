@@ -3,8 +3,8 @@ import { inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
 import Echo, { Broadcaster } from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-import { API_BASE_URL } from '@app/core/api/api.tokens';
 import { AuthService } from '@app/core/auth/auth.service';
+import { COMMANDSPHERE_RUNTIME_CONFIG } from '@app/core/config/runtime-config';
 
 type ReverbEcho = Echo<'reverb'>;
 type ReverbPrivateChannel = Broadcaster['reverb']['private'];
@@ -16,7 +16,7 @@ export interface RealtimeSubscription {
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   private readonly auth = inject(AuthService);
-  private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly runtimeConfig = inject(COMMANDSPHERE_RUNTIME_CONFIG);
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly zone = inject(NgZone);
@@ -66,18 +66,17 @@ export class RealtimeService {
       return null;
     }
 
-    const apiUrl = new URL(this.apiBaseUrl);
-    const scheme = this.env('COMMANDSPHERE_REVERB_SCHEME', 'http');
-    const port = Number(this.env('COMMANDSPHERE_REVERB_PORT', '8080'));
+    const apiUrl = new URL(this.runtimeConfig.apiBaseUrl, this.runtimeConfig.publicOrigin);
+    const { reverb } = this.runtimeConfig;
 
     this.echo = new Echo({
       broadcaster: 'reverb',
-      key: this.env('COMMANDSPHERE_REVERB_APP_KEY', 'local-reverb-key'),
-      wsHost: this.env('COMMANDSPHERE_REVERB_HOST', win.location.hostname),
-      wsPort: port,
-      wssPort: port,
-      forceTLS: scheme === 'https',
-      enabledTransports: scheme === 'https' ? ['wss'] : ['ws'],
+      key: reverb.appKey,
+      wsHost: reverb.host || win.location.hostname,
+      wsPort: reverb.port,
+      wssPort: reverb.port,
+      forceTLS: reverb.scheme === 'https',
+      enabledTransports: reverb.scheme === 'https' ? ['wss'] : ['ws'],
       authEndpoint: `${apiUrl.origin}/api/broadcasting/auth`,
       auth: {
         headers: {
@@ -89,11 +88,5 @@ export class RealtimeService {
     });
 
     return this.echo;
-  }
-
-  private env(key: string, fallback: string): string {
-    const value = this.document.defaultView?.localStorage.getItem(key);
-
-    return value !== null && value !== undefined && value !== '' ? value : fallback;
   }
 }

@@ -4,6 +4,8 @@ Scope: broad audit of CommandSphere v1 across security, telemetry, business rule
 
 This is a documentation audit. No product code was changed.
 
+Remediation update: F-001, F-010, and F-012 were addressed in branch `fix/runtime-production-config` after this audit. The fix introduced public runtime configuration for browser API/Reverb, configured SSR allowed hosts/public origin, and normalized canonical/Open Graph/JSON-LD metadata in the generated SSR HTML. Full production Docker/E2E validation remains a follow-up gate.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -28,6 +30,8 @@ The largest gaps are not in basic CRUD correctness. They are production-hardenin
 ### F-001 - Browser API Base URL Is Hardcoded To Localhost
 
 Severity: High
+
+Status: Mitigated in `fix/runtime-production-config`.
 
 Evidence:
 
@@ -243,6 +247,8 @@ Fix when touching parser/ingestion next.
 
 Severity: Medium
 
+Status: Mitigated in `fix/runtime-production-config`.
+
 Evidence:
 
 - `frontend/src/server.ts:15` allows only `localhost` and `127.0.0.1`.
@@ -289,6 +295,8 @@ High-value portfolio improvement after security/config fixes.
 ### F-012 - Frontend Reverb Runtime Config Reads From LocalStorage
 
 Severity: Low-Medium
+
+Status: Mitigated in `fix/runtime-production-config`.
 
 Evidence:
 

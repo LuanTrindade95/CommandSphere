@@ -12,7 +12,7 @@ const indexHtml = join(serverDistFolder, 'index.server.html');
 
 const app = express();
 const commonEngine = new CommonEngine({
-  allowedHosts: ['localhost', '127.0.0.1'],
+  allowedHosts: csv(process.env['COMMANDSPHERE_ALLOWED_HOSTS'] ?? 'localhost,127.0.0.1'),
 });
 
 app.use(compression());
@@ -26,6 +26,12 @@ app.use((_req, res, next) => {
 });
 
 app.get('/', renderAngular);
+
+app.get('/runtime-config.js', (_req, res) => {
+  res.type('application/javascript');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(runtimeConfigScript());
+});
 
 /**
  * Serve static files from /browser
@@ -44,17 +50,18 @@ app.get(
 app.get('**', renderAngular);
 
 function renderAngular(req: Request, res: Response, next: NextFunction): void {
-  const { protocol, originalUrl, baseUrl, headers } = req;
+  const { originalUrl, baseUrl } = req;
+  const requestUrl = publicUrlFor(originalUrl);
 
   commonEngine
     .render({
       bootstrap,
       documentFilePath: indexHtml,
-      url: `${protocol}://${headers.host}${originalUrl}`,
+      url: requestUrl,
       publicPath: browserDistFolder,
       providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
     })
-    .then((html) => res.send(postProcessSsr(html, `${protocol}://${headers.host}${originalUrl}`)))
+    .then((html) => res.send(postProcessSsr(html, requestUrl)))
     .catch((err) => next(err));
 }
 
@@ -70,25 +77,47 @@ if (isMainModule(import.meta.url)) {
 export default app;
 
 function postProcessSsr(html: string, requestUrl: string): string {
-  return withJsonLd(html, requestUrl);
+  return withJsonLd(withPublicOriginMetadata(html, requestUrl), requestUrl);
+}
+
+function runtimeConfigScript(): string {
+  const config = {
+    apiBaseUrl: process.env['COMMANDSPHERE_API_PUBLIC_URL'] ?? '/api/v1',
+    publicOrigin: publicOrigin(),
+    reverb: {
+      appKey: process.env['COMMANDSPHERE_REVERB_APP_KEY'] ?? 'local-reverb-key',
+      host: process.env['COMMANDSPHERE_REVERB_PUBLIC_HOST'] ?? process.env['COMMANDSPHERE_REVERB_HOST'] ?? 'localhost',
+      port: Number(process.env['COMMANDSPHERE_REVERB_PUBLIC_PORT'] ?? process.env['COMMANDSPHERE_REVERB_PORT'] ?? 8080),
+      scheme: process.env['COMMANDSPHERE_REVERB_PUBLIC_SCHEME'] ?? process.env['COMMANDSPHERE_REVERB_SCHEME'] ?? 'http',
+    },
+  };
+  const json = JSON.stringify(config).replace(/<\/script/gi, '<\\/script');
+
+  return `window.__COMMANDSPHERE_CONFIG__ = ${json};`;
+}
+
+function publicUrlFor(path: string): string {
+  return new URL(path, publicOrigin()).toString();
+}
+
+function publicOrigin(): string {
+  return process.env['COMMANDSPHERE_PUBLIC_ORIGIN'] ?? 'http://localhost:4200';
+}
+
+function csv(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 function withJsonLd(html: string, requestUrl: string): string {
   const url = new URL(requestUrl);
-  const isCommandPage = url.pathname.startsWith('/commands/') || url.pathname.includes('/commands/');
-  const shouldReplaceCommandSchema = isCommandPage && !html.includes('SoftwareSourceCode');
-
-  if (!shouldReplaceCommandSchema && html.includes('application/ld+json')) {
-    return html;
-  }
-
   if (!html.includes('</head>')) {
     return html;
   }
 
-  const targetHtml = isCommandPage
-    ? html.replace(/<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi, '')
-    : html;
+  const targetHtml = html.replace(/<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi, '');
   const title = extractTitle(html) ?? 'CommandSphere';
   const description = extractDescription(html) ?? 'Hub inteligente de documentacao para ecossistemas de plugins.';
   const schema = schemaFor(url, title, description);
@@ -96,6 +125,65 @@ function withJsonLd(html: string, requestUrl: string): string {
   const script = `<script type="application/ld+json" data-command-sphere-json-ld="true">${json}</script>`;
 
   return targetHtml.replace('</head>', `${script}</head>`);
+}
+
+function withPublicOriginMetadata(html: string, requestUrl: string): string {
+  if (!html.includes('</head>')) {
+    return html;
+  }
+
+  const url = new URL(requestUrl);
+  const publicOrigin = url.origin;
+  const currentUrl = escapeAttribute(url.toString());
+  const currentOgImage = extractMetaContent(html, 'property', 'og:image');
+  const currentTwitterImage = extractMetaContent(html, 'name', 'twitter:image') ?? currentOgImage;
+  const imageUrl = escapeAttribute(publicAssetUrl(currentOgImage, publicOrigin));
+  const twitterImageUrl = escapeAttribute(publicAssetUrl(currentTwitterImage, publicOrigin));
+
+  let next = html;
+  next = upsertHeadTag(next, /<link(?=[^>]*\brel=["']canonical["'])[^>]*>/i, `<link rel="canonical" href="${currentUrl}">`);
+  next = upsertHeadTag(next, /<meta(?=[^>]*\bproperty=["']og:url["'])[^>]*>/i, `<meta property="og:url" content="${currentUrl}">`);
+  next = upsertHeadTag(next, /<meta(?=[^>]*\bproperty=["']og:image["'])[^>]*>/i, `<meta property="og:image" content="${imageUrl}">`);
+  next = upsertHeadTag(next, /<meta(?=[^>]*\bname=["']twitter:image["'])[^>]*>/i, `<meta name="twitter:image" content="${twitterImageUrl}">`);
+
+  return next;
+}
+
+function upsertHeadTag(html: string, tag: RegExp, replacement: string): string {
+  if (tag.test(html)) {
+    return html.replace(tag, replacement);
+  }
+
+  return html.replace('</head>', `${replacement}</head>`);
+}
+
+function extractMetaContent(html: string, attribute: 'name' | 'property', value: string): string | null {
+  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tag = new RegExp(`<meta(?=[^>]*\\b${attribute}=["']${escapedValue}["'])[^>]*>`, 'i').exec(html)?.[0];
+
+  return tag === undefined ? null : /content=["']([^"']*)["']/i.exec(tag)?.[1] ?? null;
+}
+
+function publicAssetUrl(value: string | null, publicOrigin: string): string {
+  const fallbackPath = '/portfolio/og-command-sphere.png';
+
+  if (value === null || value.trim() === '') {
+    return new URL(fallbackPath, publicOrigin).toString();
+  }
+
+  try {
+    const url = new URL(value, publicOrigin);
+    return new URL(`${url.pathname}${url.search}${url.hash}`, publicOrigin).toString();
+  } catch {
+    return new URL(fallbackPath, publicOrigin).toString();
+  }
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
 }
 
 function schemaFor(url: URL, title: string, description: string): Record<string, unknown> {

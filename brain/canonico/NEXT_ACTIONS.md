@@ -30,6 +30,8 @@ Risks:
 
 Problem: The browser API base URL is hardcoded to `http://localhost:8000/api/v1`, while production Compose only configures the SSR server-side API URL. Reverb runtime config also relies on local defaults/localStorage.
 
+Status: Implemented in branch `fix/runtime-production-config` as the first build-loop remediation phase. Keep the Docker production hydrated-browser smoke as a remaining validation item before treating this as fully production-proven.
+
 Recommended direction:
 
 - Introduce explicit public runtime configuration for browser API origin, Reverb host, Reverb scheme, Reverb port, allowed SSR hosts, and public canonical origin.
@@ -38,9 +40,9 @@ Recommended direction:
 
 Acceptance criteria:
 
-- Production-mode browser calls do not point to localhost.
-- SSR accepts the configured production host and rejects unexpected hosts.
-- Reverb connects through documented production config.
+- Production-mode browser calls do not point to localhost. `VALIDATED` through SSR artifact smoke with public runtime config.
+- SSR uses the configured production origin for canonical, Open Graph, and JSON-LD metadata. `VALIDATED` through SSR artifact smoke.
+- Reverb uses documented production runtime config. `VALIDATED` at configuration level; websocket integration remains part of Docker/E2E validation.
 - Docker production smoke validates hydrated browser API calls.
 
 Risks:

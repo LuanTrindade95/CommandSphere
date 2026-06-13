@@ -22,8 +22,9 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Scheduled sync command for latest plugin versions.
 - Reverb private channels by community for ingestion status and command index updates.
 - Angular SSR shell with lazy standalone routes, Signals-based UI state, Transloco i18n, command palette, protected routes, and reusable UI components.
+- Browser/SSR runtime configuration separates internal SSR API calls from public browser API, Reverb, allowed hosts, and canonical public origin.
 - Markdown viewer sanitization and heading/code enhancement.
-- SEO metadata, canonical URLs, Open Graph, JSON-LD, robots, sitemap, and portfolio screenshots.
+- SEO metadata, canonical URLs, Open Graph, JSON-LD, robots, sitemap, and portfolio screenshots, with SSR post-processing normalizing public origin metadata.
 - Development and production-like Docker Compose stacks.
 
 ## Source Of Truth Files
@@ -110,3 +111,13 @@ Current Brain bootstrap did not rerun the full product gate set because this cha
 ## Current Branch Context
 
 This Brain was bootstrapped on branch `docs/commandsphere-brain-documentation`, created from `feature/commandsphere-portfolio-v1-polish`.
+
+Active remediation branch: `fix/runtime-production-config`.
+
+Latest build-loop phase completed in this branch:
+
+- F-001/F-010/F-012 runtime public configuration hardening.
+- Added `frontend/public/runtime-config.js` and SSR `/runtime-config.js` endpoint.
+- Moved Angular API/Reverb/SEO consumers to `COMMANDSPHERE_RUNTIME_CONFIG`.
+- Added public origin post-processing for canonical URL, Open Graph URL/image, Twitter image, and JSON-LD.
+- Documented public SSR/frontend variables in `.env.example`, `README.md`, and Compose files.

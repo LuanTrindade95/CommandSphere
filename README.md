@@ -200,6 +200,17 @@ docker compose -f docker-compose.prod.yml exec -T backend php artisan scout:impo
 
 Variaveis obrigatorias de producao ficam documentadas em `.env.example`: `APP_KEY`, `APP_URL`, `DB_*`, `MEILISEARCH_MASTER_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `DISCORD_*`, `REVERB_*`.
 
+Variaveis publicas do frontend SSR:
+
+| Variavel | Uso |
+|---|---|
+| `COMMANDSPHERE_PUBLIC_ORIGIN` | Origem publica usada por canonical URLs, JSON-LD e runtime config |
+| `COMMANDSPHERE_API_PUBLIC_URL` | URL publica consumida pelo browser para `/api/v1` |
+| `COMMANDSPHERE_ALLOWED_HOSTS` | Hosts aceitos pelo servidor SSR, separados por virgula |
+| `COMMANDSPHERE_REVERB_PUBLIC_HOST` | Host publico do websocket Reverb |
+| `COMMANDSPHERE_REVERB_PUBLIC_PORT` | Porta publica do websocket Reverb |
+| `COMMANDSPHERE_REVERB_PUBLIC_SCHEME` | `http` ou `https` para o websocket publico |
+
 ## Estrutura
 
 ```text

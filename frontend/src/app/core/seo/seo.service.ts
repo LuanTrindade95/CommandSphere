@@ -2,6 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 
+import { COMMANDSPHERE_RUNTIME_CONFIG } from '@app/core/config/runtime-config';
+
 export interface SeoTags {
   title: string;
   description: string;
@@ -16,9 +18,10 @@ export class SeoService {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly runtimeConfig = inject(COMMANDSPHERE_RUNTIME_CONFIG);
 
   update(tags: SeoTags): void {
-    const origin = this.document.location?.origin ?? 'http://localhost:4200';
+    const origin = this.runtimeConfig.publicOrigin;
     const url = tags.canonicalPath === undefined ? origin : new URL(tags.canonicalPath, origin).toString();
     const image = tags.image === undefined ? new URL('/portfolio/og-command-sphere.png', origin).toString() : new URL(tags.image, origin).toString();
 
