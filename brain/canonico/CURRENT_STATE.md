@@ -11,7 +11,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 ## Implemented Capabilities
 
 - Public SSR landing, search, community catalog, plugin documentation, document viewer, and command pages.
-- Discord OAuth2 and local/testing dev-login through Laravel Sanctum bearer tokens.
+- Discord OAuth2 with signed short-lived state cookie validation, plus local/testing dev-login through Laravel Sanctum bearer tokens.
 - Community-scoped permissions using Spatie teams with `community_id`.
 - Plugin and plugin version domain model with documents, commands, categories, favorites, views, and ingestion runs.
 - GitHub Markdown ingestion with ETag support, idempotent upserts, command extraction, stale command reconciliation, warnings, and partial run handling.
@@ -121,3 +121,13 @@ Latest build-loop phase completed in this branch:
 - Moved Angular API/Reverb/SEO consumers to `COMMANDSPHERE_RUNTIME_CONFIG`.
 - Added public origin post-processing for canonical URL, Open Graph URL/image, Twitter image, and JSON-LD.
 - Documented public SSR/frontend variables in `.env.example`, `README.md`, and Compose files.
+
+Active follow-up remediation branch: `fix/oauth-state-hardening`.
+
+Latest OAuth hardening phase:
+
+- F-002 Discord OAuth state/CSRF hardening.
+- Replaced unsupported generic `Socialite::driver('discord')` usage with an explicit first-party Discord Socialite provider.
+- Added signed 10-minute httpOnly `commandsphere_discord_oauth_state` cookie on redirect.
+- Callback now rejects missing, tampered, mismatched, or expired OAuth state before calling Discord.
+- Callback clears the state cookie on both success and failure.

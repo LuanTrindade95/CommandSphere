@@ -6,6 +6,8 @@ This is a documentation audit. No product code was changed.
 
 Remediation update: F-001, F-010, and F-012 were addressed in branch `fix/runtime-production-config` after this audit. The fix introduced public runtime configuration for browser API/Reverb, configured SSR allowed hosts/public origin, and normalized canonical/Open Graph/JSON-LD metadata in the generated SSR HTML. Full production Docker/E2E validation remains a follow-up gate.
 
+Remediation update: F-002 was addressed in branch `fix/oauth-state-hardening`. The fix added a first-party Discord Socialite provider, signed short-lived OAuth state cookie generation, callback state validation, state cookie cleanup, and Auth API tests for redirect, rejection, and valid callback.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -55,6 +57,8 @@ Fix before any production-like deployment claim.
 ### F-002 - Discord OAuth Uses Stateless Flow Without State/CSRF Protection
 
 Severity: High
+
+Status: Mitigated in `fix/oauth-state-hardening`.
 
 Evidence:
 

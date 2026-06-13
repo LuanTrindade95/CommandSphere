@@ -53,6 +53,8 @@ Risks:
 
 Problem: Discord OAuth currently uses `stateless()`, which removes OAuth `state` verification and weakens login CSRF/account-injection protection.
 
+Status: Implemented in branch `fix/oauth-state-hardening`. The implementation keeps Socialite stateless for API compatibility but adds first-party signed state validation through a short-lived httpOnly cookie.
+
 Recommended direction:
 
 - Add signed state for Discord OAuth.
@@ -62,8 +64,8 @@ Recommended direction:
 
 Acceptance criteria:
 
-- OAuth callback rejects missing or invalid state.
-- Valid Discord login still creates/updates the user and attaches default community membership.
+- OAuth callback rejects missing or invalid state. `VALIDATED` by `AuthApiTest`.
+- Valid Discord login still creates/updates the user and attaches default community membership. `VALIDATED` by `AuthApiTest`.
 - Auth flow remains SSR-safe and does not persist bearer tokens in browser storage.
 
 Risks:
