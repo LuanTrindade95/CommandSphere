@@ -1,0 +1,226 @@
+{
+  "admin": {
+    "ingestions": {
+      "badge": "Operations",
+      "description": "Inspect ingestion runs, status, structured stats, and logs.",
+      "emptyDescription": "No ingestion run has been registered for accessible communities.",
+      "emptyTitle": "No runs",
+      "finishedToast": "Sync finished.",
+      "runId": "Run #{{id}}",
+      "title": "Ingestions"
+    },
+    "plugins": {
+      "badge": "Admin",
+      "branchLabel": "Default branch",
+      "communityLabel": "Community",
+      "create": "Create plugin",
+      "description": "Register GitHub sources and trigger manual syncs when needed.",
+      "descriptionLabel": "Description",
+      "docsPathLabel": "Documentation path",
+      "emptyDescription": "Create this community's first plugin.",
+      "emptyTitle": "No plugins",
+      "forbiddenDescription": "Your session has no plugins.manage permission in any community.",
+      "forbiddenTitle": "Permission required",
+      "nameLabel": "Name",
+      "repoLabel": "GitHub repository",
+      "slugLabel": "Slug",
+      "sync": "Sync",
+      "title": "Plugins"
+    }
+  },
+  "analytics": {
+    "badge": "Analytics",
+    "communityLabel": "Community",
+    "description": "Ranking of most viewed commands inside the selected period.",
+    "emptyDescription": "No views were registered for this period yet.",
+    "emptyTitle": "No data",
+    "forbiddenDescription": "Your session has no analytics.view permission in available communities.",
+    "forbiddenTitle": "Permission required",
+    "period7": "7 days",
+    "period30": "30 days",
+    "period90": "90 days",
+    "periodLabel": "Period",
+    "title": "Most viewed commands"
+  },
+  "app": {
+    "name": "CommandSphere"
+  },
+  "auth": {
+    "description": "Use Discord for the real flow or the development login while human-managed credentials are not configured.",
+    "devEmailLabel": "Development email",
+    "devEmailPlaceholder": "admin@demo",
+    "devLogin": "Dev login",
+    "devLoginError": "Could not authenticate with that email.",
+    "discord": "Continue with Discord",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "title": "Workspace access"
+  },
+  "catalog": {
+    "badge": "Catalog",
+    "descriptionFallback": "Plugins, versions, and documentation for this community.",
+    "emptyDescription": "No plugin matches the current filters.",
+    "emptyTitle": "No plugins found",
+    "errorDescription": "The API did not return this community catalog.",
+    "errorTitle": "Could not load catalog",
+    "noDescription": "No description registered.",
+    "searchLabel": "Filter plugins",
+    "searchPlaceholder": "Search by name, slug, or description",
+    "titleFallback": "Community",
+    "versionCount": "{{count}} versions"
+  },
+  "command": {
+    "aliasesEmpty": "No aliases registered.",
+    "aliasesTitle": "Aliases",
+    "errorDescription": "Could not load the requested command.",
+    "errorTitle": "Command unavailable",
+    "noDescription": "No description registered.",
+    "parametersEmpty": "No structured parameters registered.",
+    "parametersTitle": "Parameters",
+    "unknownPlugin": "Plugin",
+    "views": "{{count}} views"
+  },
+  "docs": {
+    "backToCatalog": "Back to catalog",
+    "documentsTitle": "Documents",
+    "errorDescription": "Could not load this plugin documentation.",
+    "errorTitle": "Documentation unavailable",
+    "indexTitle": "Index",
+    "noDescription": "No description registered.",
+    "noDocumentDescription": "The selected version has no ingested documents yet.",
+    "noDocumentTitle": "No document",
+    "versionLabel": "Version"
+  },
+  "favorites": {
+    "add": "Favorite",
+    "badge": "Favorites",
+    "description": "Commands and documents saved for quick access.",
+    "emptyDescription": "Favorite commands or documents to build your personal panel.",
+    "emptyTitle": "Nothing favorited",
+    "remove": "Remove",
+    "title": "Favorites",
+    "unavailableTitle": "Item unavailable",
+    "unknownPlugin": "Plugin"
+  },
+  "home": {
+    "badge": "Technical portfolio · SaaS developer tools",
+    "featuresBadge": "Product",
+    "featuresTitle": "An operational hub for living documentation",
+    "heroImageAlt": "CommandSphere dark-first interface with search and structured documentation",
+    "metrics": {
+      "idempotent": {
+        "label": "Pipeline with natural-key upserts and re-sync reconciliation.",
+        "value": "Idempotent ingestion"
+      },
+      "permissions": {
+        "label": "Community-scoped RBAC with Spatie Permission and Laravel policies.",
+        "value": "Community scope"
+      },
+      "realtime": {
+        "label": "Horizon + Reverb updating ingestion runs without refresh.",
+        "value": "Realtime operations"
+      }
+    },
+    "pipelineBadge": "Pipeline",
+    "pipelineTitle": "GitHub → parser → index → search",
+    "primaryCta": "Explore search",
+    "screenshots": {
+      "docsAlt": "Doc viewer with sanitized markdown, side index, and version selector",
+      "docsTitle": "Doc viewer",
+      "searchAlt": "Global search with facets by community, plugin, and category",
+      "searchTitle": "Faceted search",
+      "adminAlt": "Ingestion operations screen with status, stats, and structured logs",
+      "adminTitle": "Ingestion operations"
+    },
+    "screenshotsBadge": "Real screenshots",
+    "screenshotsTitle": "Final product interface",
+    "secondaryCta": "Open catalog",
+    "stackBadge": "Stack",
+    "stackTitle": "Full stack architecture used in the project",
+    "summary": "All your documentation. In one ecosystem. CommandSphere ingests GitHub Markdown, extracts commands, indexes them in Meilisearch, and delivers fast discovery with SSR, i18n, permissions, and realtime.",
+    "title": "All your documentation. In one ecosystem.",
+    "features": {
+      "discovery": {
+        "description": "Realtime search, facets by community/plugin/category, command palette, and command pages with analytics.",
+        "title": "Fast discovery"
+      },
+      "ingestion": {
+        "description": "GitHub API with ETag, CommonMark parser, structured documents, and commands extracted by explicit convention.",
+        "title": "Reliable ingestion"
+      },
+      "operations": {
+        "description": "Manual sync, GitHub webhook, scheduler, Horizon, Reverb, and structured logs to operate the pipeline.",
+        "title": "Observable operations"
+      }
+    },
+    "pipeline": {
+      "github": {
+        "description": "Reads .md files by branch while respecting ETag and rate limits.",
+        "title": "GitHub API"
+      },
+      "index": {
+        "description": "Persists documents/commands and updates Meilisearch with facets.",
+        "title": "Index"
+      },
+      "parser": {
+        "description": "CommonMark + frontmatter/heading convention extract commands without fragile heuristics.",
+        "title": "Parser"
+      },
+      "search": {
+        "description": "Angular SSR consumes focused APIs for search, docs, favorites, and analytics.",
+        "title": "Search"
+      }
+    }
+  },
+  "palette": {
+    "ariaLabel": "Command palette",
+    "authRequiredDescription": "Sign in to query commands indexed by community.",
+    "authRequiredTitle": "Authentication required",
+    "emptyDescription": "Type a term to query the search API.",
+    "emptyTitle": "Search for a command",
+    "escapeKey": "Esc",
+    "noResultsDescription": "No commands matched the current term.",
+    "noResultsTitle": "No results",
+    "placeholder": "Search command, syntax, or plugin",
+    "resultCount": "{{count}} estimated results",
+    "unknownPlugin": "Plugin"
+  },
+  "search": {
+    "badge": "Search",
+    "emptyDescription": "Adjust the term or remove filters to expand results.",
+    "emptyTitle": "No commands found",
+    "facets": {
+      "category": "Category",
+      "community": "Community",
+      "plugin": "Plugin"
+    },
+    "loading": "Searching commands...",
+    "noFacets": "No facets",
+    "queryLabel": "Term",
+    "queryPlaceholder": "Search by command, syntax, or description",
+    "resultCount": "{{count}} estimated results",
+    "title": "Global search",
+    "unknownPlugin": "Plugin"
+  },
+  "shell": {
+    "foundation": "SSR Workspace",
+    "languageLabel": "Language",
+    "nav": {
+      "adminIngestions": "Ingestions",
+      "adminPlugins": "Plugins",
+      "analytics": "Analytics",
+      "catalog": "Catalog",
+      "favorites": "Favorites",
+      "search": "Search"
+    },
+    "noCommunity": "No community loaded",
+    "searchAria": "Open global search",
+    "searchPlaceholder": "Search CommandSphere",
+    "searchShortcut": "Ctrl K",
+    "mobileMenu": "Menu"
+  },
+  "toast": {
+    "forbidden": "You do not have permission for this action.",
+    "serverError": "Internal error while communicating with the API."
+  }
+}

@@ -1,0 +1,212 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: commandsphere
+      MYSQL_USER: commandsphere
+      MYSQL_PASSWORD: commandsphere
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili-data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    environment:
+      APP_NAME: CommandSphere
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: en
+      APP_FAKER_LOCALE: pt_BR
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: commandsphere
+      DB_USERNAME: commandsphere
+      DB_PASSWORD: commandsphere
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_HOST: redis
+      BROADCAST_CONNECTION: reverb
+      SCOUT_DRIVER: meilisearch
+      SCOUT_QUEUE: "true"
+      SCOUT_AFTER_COMMIT: "true"
+      SCOUT_PREFIX: commandsphere_
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_KEY: ${MEILISEARCH_MASTER_KEY}
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8080
+    command: >
+      sh -lc "cp .env.example .env
+      && sed -i 's/^REVERB_HOST=.*/REVERB_HOST=reverb/' .env
+      && php artisan key:generate --force
+      && php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  reverb:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    environment:
+      APP_NAME: CommandSphere
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: en
+      APP_FAKER_LOCALE: pt_BR
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: commandsphere
+      DB_USERNAME: commandsphere
+      DB_PASSWORD: commandsphere
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: localhost
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8080
+    command: >
+      sh -lc "cp .env.example .env
+      && php artisan key:generate --force
+      && php artisan reverb:start --host=0.0.0.0 --port=8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  horizon:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    environment:
+      APP_NAME: CommandSphere
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: en
+      APP_FAKER_LOCALE: pt_BR
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: commandsphere
+      DB_USERNAME: commandsphere
+      DB_PASSWORD: commandsphere
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      BROADCAST_CONNECTION: reverb
+      SCOUT_DRIVER: meilisearch
+      SCOUT_QUEUE: "true"
+      SCOUT_AFTER_COMMIT: "true"
+      SCOUT_PREFIX: commandsphere_
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_KEY: ${MEILISEARCH_MASTER_KEY}
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
+    command: >
+      sh -lc "cp .env.example .env
+      && sed -i 's/^REVERB_HOST=.*/REVERB_HOST=reverb/' .env
+      && php artisan key:generate --force
+      && php artisan horizon"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    environment:
+      NODE_ENV: development
+      COMMANDSPHERE_API_INTERNAL_URL: http://backend:8000/api/v1
+      COMMANDSPHERE_API_PUBLIC_URL: http://localhost:8000/api/v1
+      COMMANDSPHERE_PUBLIC_ORIGIN: http://localhost:4200
+      COMMANDSPHERE_ALLOWED_HOSTS: localhost,127.0.0.1
+      COMMANDSPHERE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+      COMMANDSPHERE_REVERB_HOST: localhost
+      COMMANDSPHERE_REVERB_PORT: 8080
+      COMMANDSPHERE_REVERB_SCHEME: http
+      COMMANDSPHERE_REVERB_PUBLIC_HOST: localhost
+      COMMANDSPHERE_REVERB_PUBLIC_PORT: 8080
+      COMMANDSPHERE_REVERB_PUBLIC_SCHEME: http
+    ports:
+      - "4200:4200"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  meili-data:

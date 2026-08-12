@@ -1,0 +1,226 @@
+{
+  "admin": {
+    "ingestions": {
+      "badge": "Operações",
+      "description": "Acompanhe execuções de ingestão, status, estatísticas e logs estruturados.",
+      "emptyDescription": "Nenhuma ingestão foi registrada para as comunidades acessíveis.",
+      "emptyTitle": "Sem execuções",
+      "finishedToast": "Sincronização finalizada.",
+      "runId": "Execução #{{id}}",
+      "title": "Ingestões"
+    },
+    "plugins": {
+      "badge": "Admin",
+      "branchLabel": "Branch padrão",
+      "communityLabel": "Comunidade",
+      "create": "Cadastrar plugin",
+      "description": "Cadastre fontes GitHub e dispare sincronizações manuais quando necessário.",
+      "descriptionLabel": "Descrição",
+      "docsPathLabel": "Caminho da documentação",
+      "emptyDescription": "Cadastre o primeiro plugin desta comunidade.",
+      "emptyTitle": "Sem plugins",
+      "forbiddenDescription": "Sua sessão não possui plugins.manage em nenhuma comunidade.",
+      "forbiddenTitle": "Permissão necessária",
+      "nameLabel": "Nome",
+      "repoLabel": "Repositório GitHub",
+      "slugLabel": "Slug",
+      "sync": "Sincronizar",
+      "title": "Plugins"
+    }
+  },
+  "analytics": {
+    "badge": "Métricas",
+    "communityLabel": "Comunidade",
+    "description": "Ranking de comandos mais vistos dentro do período selecionado.",
+    "emptyDescription": "Ainda não há visualizações registradas para este período.",
+    "emptyTitle": "Sem dados",
+    "forbiddenDescription": "Sua sessão não possui analytics.view nas comunidades disponíveis.",
+    "forbiddenTitle": "Permissão necessária",
+    "period7": "7 dias",
+    "period30": "30 dias",
+    "period90": "90 dias",
+    "periodLabel": "Período",
+    "title": "Comandos mais vistos"
+  },
+  "app": {
+    "name": "CommandSphere"
+  },
+  "auth": {
+    "description": "Entre com Discord no fluxo real ou use o login de desenvolvimento enquanto as credenciais humanas não estiverem configuradas.",
+    "devEmailLabel": "E-mail de desenvolvimento",
+    "devEmailPlaceholder": "admin@demo",
+    "devLogin": "Entrar em dev",
+    "devLoginError": "Não foi possível autenticar com esse e-mail.",
+    "discord": "Entrar com Discord",
+    "login": "Entrar",
+    "logout": "Sair",
+    "title": "Acesso ao workspace"
+  },
+  "catalog": {
+    "badge": "Catálogo",
+    "descriptionFallback": "Plugins, versões e documentação desta comunidade.",
+    "emptyDescription": "Nenhum plugin corresponde aos filtros atuais.",
+    "emptyTitle": "Nenhum plugin encontrado",
+    "errorDescription": "A API não retornou o catálogo desta comunidade.",
+    "errorTitle": "Falha ao carregar catálogo",
+    "noDescription": "Sem descrição cadastrada.",
+    "searchLabel": "Filtrar plugins",
+    "searchPlaceholder": "Buscar por nome, slug ou descrição",
+    "titleFallback": "Comunidade",
+    "versionCount": "{{count}} versões"
+  },
+  "command": {
+    "aliasesEmpty": "Nenhum alias cadastrado.",
+    "aliasesTitle": "Apelidos",
+    "errorDescription": "Não foi possível carregar o comando solicitado.",
+    "errorTitle": "Comando indisponível",
+    "noDescription": "Sem descrição cadastrada.",
+    "parametersEmpty": "Nenhum parâmetro estruturado cadastrado.",
+    "parametersTitle": "Parâmetros",
+    "unknownPlugin": "Plugin",
+    "views": "{{count}} visualizações"
+  },
+  "docs": {
+    "backToCatalog": "Voltar ao catálogo",
+    "documentsTitle": "Documentos",
+    "errorDescription": "Não foi possível carregar a documentação deste plugin.",
+    "errorTitle": "Documentação indisponível",
+    "indexTitle": "Índice",
+    "noDescription": "Sem descrição cadastrada.",
+    "noDocumentDescription": "A versão selecionada ainda não possui documentos ingeridos.",
+    "noDocumentTitle": "Sem documento",
+    "versionLabel": "Versão"
+  },
+  "favorites": {
+    "add": "Favoritar",
+    "badge": "Favoritos",
+    "description": "Comandos e documentos salvos para consulta rápida.",
+    "emptyDescription": "Favorite comandos ou documentos para montar seu painel pessoal.",
+    "emptyTitle": "Nada favoritado",
+    "remove": "Remover",
+    "title": "Favoritos",
+    "unavailableTitle": "Item indisponível",
+    "unknownPlugin": "Plugin"
+  },
+  "home": {
+    "badge": "Portfólio técnico · SaaS para documentação de plugins",
+    "featuresBadge": "Produto",
+    "featuresTitle": "Um hub operacional para documentação viva",
+    "heroImageAlt": "Interface dark-first do CommandSphere com busca e documentação estruturada",
+    "metrics": {
+      "idempotent": {
+        "label": "Pipeline com upsert por chave natural e reconciliação em ressincronização.",
+        "value": "Ingestão idempotente"
+      },
+      "permissions": {
+        "label": "RBAC por comunidade com Spatie Permission e policies Laravel.",
+        "value": "Escopo por comunidade"
+      },
+      "realtime": {
+        "label": "Horizon + Reverb atualizando execuções de ingestão sem recarregar a página.",
+        "value": "Operação em tempo real"
+      }
+    },
+    "pipelineBadge": "Pipeline",
+    "pipelineTitle": "GitHub → parser → índice → busca",
+    "primaryCta": "Explorar busca",
+    "screenshots": {
+      "docsAlt": "Visualizador de documentação com Markdown sanitizado, índice lateral e seletor de versão",
+      "docsTitle": "Visualizador de documentação",
+      "searchAlt": "Busca global com facetas por comunidade, plugin e categoria",
+      "searchTitle": "Busca com facetas",
+      "adminAlt": "Tela de ingestões com status, estatísticas e logs estruturados",
+      "adminTitle": "Operação de ingestões"
+    },
+    "screenshotsBadge": "Capturas reais",
+    "screenshotsTitle": "Interface final do produto",
+    "secondaryCta": "Abrir catálogo",
+    "stackBadge": "Arquitetura",
+    "stackTitle": "Stack técnica usada no projeto",
+    "summary": "Toda sua documentação. Em um único ecossistema. CommandSphere ingere Markdown do GitHub, extrai comandos, indexa no Meilisearch e entrega descoberta rápida com SSR, i18n, permissões e tempo real.",
+    "title": "Toda sua documentação. Em um único ecossistema.",
+    "features": {
+      "discovery": {
+        "description": "Busca em tempo real, facetas por comunidade/plugin/categoria, paleta de comandos e páginas de comando com métricas.",
+        "title": "Descoberta rápida"
+      },
+      "ingestion": {
+        "description": "GitHub API com ETag, parser CommonMark, documentos estruturados e comandos extraídos por convenção explícita.",
+        "title": "Ingestão confiável"
+      },
+      "operations": {
+        "description": "Sincronização manual, webhook GitHub, agendador, Horizon, Reverb e logs estruturados para operar o pipeline.",
+        "title": "Operação observável"
+      }
+    },
+    "pipeline": {
+      "github": {
+        "description": "Busca arquivos .md por branch, respeitando ETag e rate limit.",
+        "title": "GitHub API"
+      },
+      "index": {
+        "description": "Persiste documentos/comandos e atualiza Meilisearch com facetas.",
+        "title": "Índice"
+      },
+      "parser": {
+        "description": "CommonMark + frontmatter/convenção de headings extraem comandos sem heurística frágil.",
+        "title": "Analisador"
+      },
+      "search": {
+        "description": "Angular SSR consome APIs enxutas para busca, documentação, favoritos e métricas.",
+        "title": "Busca"
+      }
+    }
+  },
+  "palette": {
+    "ariaLabel": "Paleta de comandos",
+    "authRequiredDescription": "Faça login para consultar comandos indexados por comunidade.",
+    "authRequiredTitle": "Autenticação necessária",
+    "emptyDescription": "Digite um termo para consultar a API de busca.",
+    "emptyTitle": "Busque um comando",
+    "escapeKey": "Esc",
+    "noResultsDescription": "A busca não encontrou comandos para o termo informado.",
+    "noResultsTitle": "Nenhum resultado",
+    "placeholder": "Buscar comando, sintaxe ou plugin",
+    "resultCount": "{{count}} resultados estimados",
+    "unknownPlugin": "Plugin"
+  },
+  "search": {
+    "badge": "Busca",
+    "emptyDescription": "Ajuste o termo ou remova filtros para ampliar os resultados.",
+    "emptyTitle": "Nenhum comando encontrado",
+    "facets": {
+      "category": "Categoria",
+      "community": "Comunidade",
+      "plugin": "Plugin"
+    },
+    "loading": "Buscando comandos...",
+    "noFacets": "Sem facetas",
+    "queryLabel": "Termo",
+    "queryPlaceholder": "Buscar por comando, sintaxe ou descrição",
+    "resultCount": "{{count}} resultados estimados",
+    "title": "Busca global",
+    "unknownPlugin": "Plugin"
+  },
+  "shell": {
+    "foundation": "Área SSR",
+    "languageLabel": "Idioma",
+    "nav": {
+      "adminIngestions": "Ingestões",
+      "adminPlugins": "Plugins",
+      "analytics": "Métricas",
+      "catalog": "Catálogo",
+      "favorites": "Favoritos",
+      "search": "Busca"
+    },
+    "noCommunity": "Nenhuma comunidade carregada",
+    "searchAria": "Abrir busca global",
+    "searchPlaceholder": "Buscar no CommandSphere",
+    "searchShortcut": "Ctrl K",
+    "mobileMenu": "Menu"
+  },
+  "toast": {
+    "forbidden": "Você não tem permissão para esta ação.",
+    "serverError": "Erro interno ao comunicar com a API."
+  }
+}
