@@ -1,4 +1,23 @@
-import { expect, Page, test } from '@playwright/test';
+import { expect, Page, request, test } from '@playwright/test';
+
+/**
+ * Every prerendered HTML file Angular writes to disk, plus the dynamically
+ * generated runtime config script. All of these are full documents (or, for
+ * `/runtime-config.js`, a script the document depends on) reachable directly
+ * over HTTP in production (`docker-compose.prod.yml` publishes the Express
+ * server with no reverse proxy in front), so each one must carry the same
+ * strict CSP as every SSR-rendered route, and never a long-lived cache.
+ */
+const PRERENDERED_HTML_PATHS = [
+  '/index.html',
+  '/search/index.html',
+  '/login/index.html',
+  '/analytics/index.html',
+  '/favorites/index.html',
+  '/admin/plugins/index.html',
+  '/admin/ingestions/index.html',
+  '/index.csr.html',
+];
 
 interface CspViolation {
   directive: string;
@@ -42,6 +61,59 @@ test('the login page response carries a strict, applied Content-Security-Policy'
   expect(csp).not.toContain('unsafe-inline');
   expect(csp).not.toContain('unsafe-eval');
   expect(response?.headers()['content-security-policy-report-only']).toBeUndefined();
+});
+
+test('every prerendered HTML file and runtime-config.js carry the strict CSP and are never cached', async ({ baseURL }) => {
+  const context = await request.newContext({ baseURL });
+
+  for (const path of [...PRERENDERED_HTML_PATHS, '/runtime-config.js']) {
+    const response = await context.get(path);
+    const headers = response.headers();
+
+    expect(response.status(), `${path} status`).toBe(200);
+    expect(headers['content-security-policy'], `${path} missing CSP`).toBeDefined();
+    expect(headers['content-security-policy'], `${path} allows unsafe-inline`).not.toContain('unsafe-inline');
+    expect(headers['cache-control'], `${path} cache-control`).toContain('no-store');
+  }
+
+  for (const path of PRERENDERED_HTML_PATHS) {
+    const response = await context.get(path);
+    const csp = response.headers()['content-security-policy'] ?? '';
+
+    expect(csp, `${path} script-src`).toMatch(/script-src 'self'/);
+    expect(csp, `${path} style-src nonce`).toMatch(/style-src 'self' 'nonce-[^']+'/);
+  }
+
+  await context.dispose();
+});
+
+test('an inline script and an <img onerror> injected into a prerendered HTML file do not execute', async ({ page, baseURL }) => {
+  for (const path of ['/index.html', '/index.csr.html']) {
+    await page.route('**' + path, async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace(
+        '</body>',
+        `<script>window.__cspAuditMarker = 'executed';</script><img src="x" onerror="window.__cspAuditImgFired = true">` +
+          '</body>',
+      );
+
+      await route.fulfill({ response, body, headers: response.headers() });
+    });
+
+    const readViolations = await collectCspViolations(page);
+
+    await page.goto(new URL(path, baseURL).toString(), { waitUntil: 'networkidle' });
+
+    const marker = await page.evaluate(() => (window as unknown as { __cspAuditMarker?: string }).__cspAuditMarker);
+    const imgFired = await page.evaluate(() => (window as unknown as { __cspAuditImgFired?: boolean }).__cspAuditImgFired);
+    const violations = await readViolations();
+
+    expect(marker, `${path} inline script executed`).toBeUndefined();
+    expect(imgFired, `${path} inline onerror executed`).toBeUndefined();
+    expect(violations.length, `${path} expected a reported CSP violation`).toBeGreaterThan(0);
+
+    await page.unroute('**' + path);
+  }
 });
 
 test('hydration, search, the command palette, the doc viewer, and admin realtime status raise no CSP violation', async ({ page }) => {
