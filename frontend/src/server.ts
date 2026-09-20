@@ -1,10 +1,12 @@
 import { APP_BASE_HREF } from '@angular/common';
+import { CSP_NONCE } from '@angular/core';
 import { CommonEngine, isMainModule } from '@angular/ssr/node';
 import compression from 'compression';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bootstrap from './main.server';
+import { buildContentSecurityPolicy, generateCspNonce, resolveRuntimeBrowserConfig } from './server/content-security-policy';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -52,6 +54,13 @@ app.get('**', renderAngular);
 function renderAngular(req: Request, res: Response, next: NextFunction): void {
   const { originalUrl, baseUrl } = req;
   const requestUrl = publicUrlFor(originalUrl);
+  const nonce = generateCspNonce();
+
+  res.setHeader('Content-Security-Policy', buildContentSecurityPolicy(resolveRuntimeBrowserConfig(process.env, publicOrigin()), nonce));
+  // A response carrying a per-request style-src nonce must never be cached,
+  // otherwise a cached page would ship a nonce that no longer matches any
+  // future request's Content-Security-Policy header.
+  res.setHeader('Cache-Control', 'no-store');
 
   commonEngine
     .render({
@@ -59,9 +68,19 @@ function renderAngular(req: Request, res: Response, next: NextFunction): void {
       documentFilePath: indexHtml,
       url: requestUrl,
       publicPath: browserDistFolder,
-      providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
+      // CommonEngine inlines critical CSS by default on every non-prerendered
+      // render, independently of the `angular.json` build-time optimization.
+      // That injects a `<style>` block plus a `<link ... onload="...">`
+      // attribute, which would require `unsafe-inline` in style-src-elem and
+      // script-src-attr. Disabled to keep the nonce-based style-src strict
+      // for dynamic routes (e.g. `/c/:slug`, `/p/:slug`, `/commands/:slug`).
+      inlineCriticalCss: false,
+      providers: [
+        { provide: APP_BASE_HREF, useValue: baseUrl },
+        { provide: CSP_NONCE, useValue: nonce },
+      ],
     })
-    .then((html) => res.send(postProcessSsr(html, requestUrl)))
+    .then((html) => res.send(withCspNonceAttribute(postProcessSsr(html, requestUrl), nonce)))
     .catch((err) => next(err));
 }
 
@@ -80,17 +99,20 @@ function postProcessSsr(html: string, requestUrl: string): string {
   return withJsonLd(withPublicOriginMetadata(html, requestUrl), requestUrl);
 }
 
+/**
+ * Stamps the per-request CSP nonce onto the app root element as `ngCspNonce`.
+ * Angular's `CSP_NONCE` token defaults to reading this attribute from the
+ * document body's descendants, so any `<style>` tag Angular creates at
+ * runtime for lazy-loaded route styles (both during this SSR pass and after
+ * client hydration) is tagged with a nonce that matches the response's
+ * `Content-Security-Policy` header.
+ */
+function withCspNonceAttribute(html: string, nonce: string): string {
+  return html.replace(/<app-root(?![\w-])/, `<app-root ngCspNonce="${nonce}"`);
+}
+
 function runtimeConfigScript(): string {
-  const config = {
-    apiBaseUrl: process.env['COMMANDSPHERE_API_PUBLIC_URL'] ?? '/api/v1',
-    publicOrigin: publicOrigin(),
-    reverb: {
-      appKey: process.env['COMMANDSPHERE_REVERB_APP_KEY'] ?? 'local-reverb-key',
-      host: process.env['COMMANDSPHERE_REVERB_PUBLIC_HOST'] ?? process.env['COMMANDSPHERE_REVERB_HOST'] ?? 'localhost',
-      port: Number(process.env['COMMANDSPHERE_REVERB_PUBLIC_PORT'] ?? process.env['COMMANDSPHERE_REVERB_PORT'] ?? 8080),
-      scheme: process.env['COMMANDSPHERE_REVERB_PUBLIC_SCHEME'] ?? process.env['COMMANDSPHERE_REVERB_SCHEME'] ?? 'http',
-    },
-  };
+  const config = resolveRuntimeBrowserConfig(process.env, publicOrigin());
   const json = JSON.stringify(config).replace(/<\/script/gi, '<\\/script');
 
   return `window.__COMMANDSPHERE_CONFIG__ = ${json};`;
