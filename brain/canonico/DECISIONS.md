@@ -61,3 +61,16 @@ Consequences:
 - `critical` blocks the pipeline; `high` and `moderate` without a non-major fix are recorded as risk under ADR-24 and never reported as corrected.
 - An override that leaves the range declared by its dependent needs a recorded ADR stating the verified facts that justify it, as in ADR-26.
 - Toolchain major upgrades stay a deliberate, separately planned task.
+
+## BRAIN-007 - External Integrations Fail Closed With A Stable Failure Code
+
+Decision: A call to an external service either produces the data it promised or ends the operation explicitly. An unexpected status, an unparseable body, a payload missing a required field, and a response flagged as incomplete are all failures, never an empty successful result. Every failure category carries a stable code persisted in the operation record, under the `code` key that consumers already read.
+
+Consequences:
+
+- A run that ingested nothing must be distinguishable from a source that legitimately has nothing. `success` with zero documents is a defect, not a state.
+- An exception type raised by an integration must be caught at the boundary that owns the operation record. An exception escaping that boundary leaves the record stuck in `running` with no `finished_at`, which is worse than a wrong status because no operator sees it end.
+- A failure code, once asserted by a test, is a contract. It is not renamed for aesthetics; new categories get clean literals while legacy ones keep their shape, as in ADR-27.
+- Transient categories are matched by range (`>= 500`), not by an enumerated list, so unseen statuses stay covered.
+- Failure messages carry identifiers and status only. Tokens, authorization headers, and response bodies never reach a log or an exception message.
+- Failing closed raises the cost of a transient outage. Retry belongs to the operator-facing surface, deliberately scoped, never smuggled into the client as silent recovery.

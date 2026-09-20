@@ -301,3 +301,26 @@ Declarar em `frontend/package.json` os overrides `"pacote": "20.0.1"` e `"tar": 
 
 ### Consequências
 `npm audit --audit-level=critical` volta a sair com código 0 sem afrouxar o gate, sem `npm audit fix --force` e sem upgrade de major. O custo é um ponto de manutenção: no upgrade da toolchain Angular os dois overrides devem ser reavaliados e removidos assim que a cadeia oficial trouxer `tar` 7.x. Vulnerabilidades `high` e `moderate` remanescentes seguem a política do ADR-24: registradas como risco, nunca declaradas corrigidas.
+
+## ADR-27 — Client GitHub fail-closed com taxonomia de códigos de falha
+
+### Contexto
+`HttpGitHubClient::request()` mapeava apenas 403 para rate limit e 404 para repositório inexistente. Todo o restante — 401, 409, 422, 429, 5xx, falha de conexão — retornava uma `Response` normal, e `markdownFiles()` a consumia com `json('tree', [])`. O efeito era fail-open: corpo não-JSON, corpo sem `tree` ou erro de servidor viravam lista vazia, e a ingestão terminava `success` sem nenhum documento, indistinguível de um repositório legitimamente sem documentação. `base64_decode(...) ?: ''` transformava conteúdo inválido em documento vazio persistido em silêncio, e uma árvore com `truncated: true` era tratada como completa. Havia ainda uma segunda perna, não descrita na F-006: `IngestionService::run()` capturava apenas as duas exceções existentes, de modo que qualquer outra escapava do método e deixava o `IngestionRun` preso em `running`, sem `finished_at` e sem log.
+
+### Decisão
+Introduzir a hierarquia `App\Exceptions\GitHubClientException`, abstrata, com o método `failureCode()` devolvendo um código estável e seguro para log. O client passa a falhar explicitamente em toda resposta que não seja sucesso e em todo payload que não satisfaça o formato esperado, e `IngestionService::run()` captura a hierarquia inteira, encerrando o run por `fail()`. As categorias e seus códigos:
+
+- rate limit → `git_hub_rate_limit_exception` (403 com sinal de rate limit, e 429)
+- autenticação ou permissão → `github_authentication_failed` (401, e 403 sem sinal de rate limit)
+- repositório ou ref inexistente → `git_hub_repository_not_found_exception` (404)
+- conflito ou validação → `github_validation_failed` (409, 422)
+- erro transitório → `github_transient_error` (qualquer status `>= 500`, falha de conexão, timeout)
+- payload malformado → `github_malformed_response` (corpo não-JSON, corpo sem `tree`, base64 inválido, encoding não suportado)
+- árvore truncada → `github_tree_truncated`
+
+Os dois códigos herdados mantêm o formato derivado do nome da classe porque há asserção literal em teste existente, e alterar expectativa de teste para acomodar estética seria degradar evidência. Códigos novos usam literais explícitos. A distinção entre 403 de rate limit e 403 de permissão é feita pelo cabeçalho de rate limit, não pelo status isolado.
+
+Decisões de escopo tomadas junto: árvore truncada encerra como `failed`, e não como `partial`, porque um inventário incompleto ingerido parcialmente acionaria a reconciliação do ADR-10 e apagaria comandos que apenas não vieram na resposta; a falha de um único arquivo também derruba o run inteiro, preservando o comportamento de abortar que já existia. Retry e backoff ficam fora, na Prioridade 8.
+
+### Consequências
+Nenhuma resposta de erro do GitHub pode mais terminar como sucesso vazio, e todo run que falha carrega um código estável em `IngestionRun.log`, na chave `code` que já existia. A assinatura de `IngestionService::fail()` e a estrutura das entradas de `log` não mudaram, então consumidores a jusante — telemetria e correlação de eventos — leem a taxonomia sem migração. O teste de transitório usa `>= 500` em vez de lista de status, de modo que qualquer 5xx futuro é coberto sem alteração. O caminho 304/ETag do ADR-11 retorna antes de qualquer verificação de erro e segue inalterado: o run permanece `success` e registra `document_not_modified`. O trade-off é rigidez deliberada — uma indisponibilidade momentânea do GitHub agora reprova o run inteiro em vez de ingerir o que deu, e é exatamente por isso que a ação de retry da Prioridade 8 se torna mais necessária. Mensagens de exceção carregam apenas repositório, caminho e status; nunca o token, o cabeçalho `Authorization` ou o corpo da resposta.
