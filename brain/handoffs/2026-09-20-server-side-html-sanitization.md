@@ -13,7 +13,7 @@ Audit finding F-009: `content_html` derived from third-party Markdown was stored
 - `MarkdownParser` converts with `html_input=escape` and `allow_unsafe_links=false`, then sanitizes before persistence.
 - `Document` exposes a `contentHtml()` accessor that sanitizes on every read without rewriting the stored column, which is what covers rows ingested before the fix.
 - Tests: `tests/Unit/Services/Markdown/HtmlSanitizerTest.php` (19 malicious cases plus 8 legitimate ones) and `tests/Feature/MarkdownSanitizationTest.php` (full parse pipeline, and a legacy row written straight to the database served sanitized by the API).
-- See ADR-26 in `docs/DECISIONS.md`.
+- See ADR-28 in `docs/DECISIONS.md`.
 
 ## Validation
 

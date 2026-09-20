@@ -7,8 +7,7 @@ use App\Data\ParsedCommand;
 use App\Data\ParsedDocument;
 use App\Events\CommandIndexUpdated;
 use App\Events\IngestionRunStatusChanged;
-use App\Exceptions\GitHubRateLimitException;
-use App\Exceptions\GitHubRepositoryNotFoundException;
+use App\Exceptions\GitHubClientException;
 use App\Models\Category;
 use App\Models\Command;
 use App\Models\Document;
@@ -84,10 +83,10 @@ class IngestionService
 
         try {
             $files = $this->github->markdownFiles($pluginVersion->plugin, $pluginVersion->git_ref ?: $pluginVersion->plugin->default_branch);
-        } catch (GitHubRateLimitException|GitHubRepositoryNotFoundException $exception) {
+        } catch (GitHubClientException $exception) {
             return $this->fail($run, $stats, [[
                 'level' => 'error',
-                'code' => Str::snake(class_basename($exception)),
+                'code' => $exception->failureCode(),
                 'message' => $exception->getMessage(),
             ]]);
         }

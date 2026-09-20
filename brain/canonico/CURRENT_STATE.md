@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-06-13
+Updated: 2026-09-20
 
 ## Product Status
 
@@ -15,6 +15,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Community-scoped permissions using Spatie teams with `community_id`.
 - Plugin and plugin version domain model with documents, commands, categories, favorites, views, and ingestion runs.
 - GitHub Markdown ingestion with ETag support, idempotent upserts, command extraction, stale command reconciliation, warnings, and partial run handling.
+- GitHub client fails closed: every non-success status and every malformed payload raises a `GitHubClientException` subtype, and `IngestionService::run()` ends the run as `failed` with a stable `failureCode()` in `IngestionRun.log`. A run can no longer finish `success` with zero documents because of an API error.
 - Search through Laravel Scout and Meilisearch with facets for community, plugin, and category.
 - Redis-backed discovery cache invalidated by a global version key after ingestion.
 - Favorites and command-view analytics with short-window dedupe.
@@ -112,9 +113,20 @@ Current Brain bootstrap did not rerun the full product gate set because this cha
 
 ## Current Branch Context
 
+`main` is the current integration point and its CI is green: run `35485832903` on commit `8623fea` finished with `success` in both jobs, Backend and Frontend. Before that, `main` had been red since the merge of PR #1, failing only on dependency audit steps.
+
 This Brain was bootstrapped on branch `docs/commandsphere-brain-documentation`, created from `feature/commandsphere-portfolio-v1-polish`.
 
-Active remediation branch: `fix/runtime-production-config`.
+Remediation branch merged into `main` through PR #5: `fix/ci-dependency-advisories`.
+
+Dependency advisory phase:
+
+- Backend locks updated inside the current majors: guzzle `7.11.0 -> 7.15.5`, psr7 `2.11.0 -> 2.13.1`, commonmark `2.8.2 -> 2.10.1`, phpseclib `3.0.52 -> 3.0.57`. `composer audit` reports no advisories; `backend/composer.json` was not touched.
+- The frontend `critical` (`tar`, path traversal) is closed through the `pacote` and `tar` overrides recorded in ADR-26. `npm audit --audit-level=critical` exits 0.
+- Remaining `high` and `moderate` advisories belong to the Angular runtime and toolchain and have no non-major fix; `19.2.25` is the last published release of the Angular 19 runtime line. They are recorded as risk under ADR-24, not as corrected.
+- Backend Pest on the GitHub runner reports `32 warnings, 1 passed` while the same suite in the dev container reports `33 passed (191 assertions)`. The warnings come from `file_get_contents` on runner paths. The suite is byte-identical to the previous `main`, so this is a runner environment condition, not a skipped test — but it makes the Backend green on CI weaker than the local green.
+
+Earlier remediation branch: `fix/runtime-production-config`.
 
 Latest build-loop phase completed in this branch:
 
@@ -164,11 +176,23 @@ Latest analytics hardening phase:
 - Analytics response metadata now includes `days` and `max_days`.
 - Local tests isolate command-view dedupe from Meilisearch when search indexing is not the behavior under test.
 
+Active GitHub client remediation branch: `fix/github-client-fail-closed`.
+
+Latest ingestion resilience phase:
+
+- F-006 GitHub client fail-closed taxonomy.
+- `App\Exceptions\GitHubClientException` is the abstract base for every GitHub failure, exposing `failureCode()`.
+- Categories and codes: `git_hub_rate_limit_exception`, `github_authentication_failed`, `git_hub_repository_not_found_exception`, `github_validation_failed`, `github_transient_error`, `github_malformed_response`, `github_tree_truncated`.
+- A 403 is classified by the rate-limit header, not by status alone, so a permission denial is no longer reported as rate limiting.
+- Transient failures match `>= 500` plus connection errors, not an enumerated status list.
+- A truncated tree and an unreadable file both end the run as `failed`; neither degrades to `partial`.
+- `IngestionService::fail()` signature and `IngestionRun.log` entry shape are unchanged, so downstream consumers read the taxonomy through the existing `code` key.
+
 Active sanitization remediation branch: `fix/server-side-html-sanitization`.
 
 Latest sanitization hardening phase:
 
-- F-009 server-side sanitization boundary (see ADR-26).
+- F-009 server-side sanitization boundary (see ADR-28).
 - Markdown conversion now runs with `html_input=escape` and `allow_unsafe_links=false`.
 - `HtmlSanitizer` applies a tag/attribute allowlist over `DOMDocument`; `href`/`src` accept only `http`, `https`, `mailto`, and relative paths, with control bytes stripped before the scheme check.
 - A `Document` accessor sanitizes `content_html` on every read, so rows stored before the fix are served sanitized without any data migration.

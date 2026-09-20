@@ -14,6 +14,8 @@ Remediation update: F-004 and F-007 were addressed in branch `fix/ingestion-run-
 
 Remediation update: F-005 was addressed in branch `fix/analytics-bounds`. The analytics endpoint now validates `days`, caps the period with `COMMANDSPHERE_ANALYTICS_MAX_DAYS`, and returns the accepted period in metadata.
 
+Remediation update: F-006 was addressed in branch `fix/github-client-fail-closed`. The GitHub client now fails closed on every non-success status and every malformed payload, through the `GitHubClientException` hierarchy whose `failureCode()` persists a stable code in `IngestionRun.log`. `IngestionService::run()` catches the whole hierarchy, so no GitHub failure escapes the run and leaves it stuck in `running`. Taxonomy and scope trade-offs are recorded in ADR-27.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -169,6 +171,8 @@ Fix with the next analytics iteration.
 ### F-006 - GitHub Client Does Not Fail Closed For Non-403/404 HTTP Errors
 
 Severity: Medium
+
+Status: Mitigated in `fix/github-client-fail-closed`.
 
 Evidence:
 

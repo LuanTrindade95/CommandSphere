@@ -291,7 +291,41 @@ Adicionar Dockerfiles multi-stage para backend PHP-FPM e frontend Node SSR, alé
 ### Consequências
 A stack pode ser validada localmente com `docker compose -f docker-compose.prod.yml up -d --build`, preservando separação entre runtime PHP-FPM, SSR Node e serviços de dados. O trade-off é manter dois caminhos Docker: dev com DX/testes e prod com empacotamento mais fiel ao deploy.
 
-## ADR-26 — Sanitização de HTML no servidor em duas camadas
+## ADR-26 — Override de `pacote` para fechar vulnerabilidade crítica sem upgrade de major
+
+### Contexto
+O CI da `main` ficou vermelho desde o merge do PR #1 por auditoria de dependências. No frontend, a única vulnerabilidade `critical` era `tar <=7.5.20` (path traversal por hardlink/symlink), alcançada de forma transitiva. `@angular/cli@19.2.27` fixa `pacote` em `20.0.0` exato, e `pacote@20.0.0` depende de `tar ^6.1.11` — uma linha que nunca recebeu patch de segurança. Sem tocar nessa cadeia, a critical só fecharia com upgrade de major da toolchain Angular, fora do escopo da correção.
+
+### Decisão
+Declarar em `frontend/package.json` os overrides `"pacote": "20.0.1"` e `"tar": "^7.5.21"`. A versão forçada de `pacote` está fora do pin exato declarado pelo `@angular/cli`, e isso é aceito conscientemente como exceção, com base nestes fatos verificados: a única diferença de dependências entre `pacote@20.0.0` e `20.0.1` é `tar: ^6.1.11 -> ^7.5.10`, com `engines` e `bin` idênticos; `pacote` é usado apenas por `ng update` e `ng add`, nunca em build, teste, SSR ou runtime; com `tar ^7.5.21`, os requisitos de `cacache` (`^7.4.3`), `node-gyp` (`^7.4.3`) e `pacote@20.0.1` (`^7.5.10`) são satisfeitos pela mesma versão resolvida, e `npm ls` não reporta `invalid`.
+
+### Consequências
+`npm audit --audit-level=critical` volta a sair com código 0 sem afrouxar o gate, sem `npm audit fix --force` e sem upgrade de major. O custo é um ponto de manutenção: no upgrade da toolchain Angular os dois overrides devem ser reavaliados e removidos assim que a cadeia oficial trouxer `tar` 7.x. Vulnerabilidades `high` e `moderate` remanescentes seguem a política do ADR-24: registradas como risco, nunca declaradas corrigidas.
+
+## ADR-27 — Client GitHub fail-closed com taxonomia de códigos de falha
+
+### Contexto
+`HttpGitHubClient::request()` mapeava apenas 403 para rate limit e 404 para repositório inexistente. Todo o restante — 401, 409, 422, 429, 5xx, falha de conexão — retornava uma `Response` normal, e `markdownFiles()` a consumia com `json('tree', [])`. O efeito era fail-open: corpo não-JSON, corpo sem `tree` ou erro de servidor viravam lista vazia, e a ingestão terminava `success` sem nenhum documento, indistinguível de um repositório legitimamente sem documentação. `base64_decode(...) ?: ''` transformava conteúdo inválido em documento vazio persistido em silêncio, e uma árvore com `truncated: true` era tratada como completa. Havia ainda uma segunda perna, não descrita na F-006: `IngestionService::run()` capturava apenas as duas exceções existentes, de modo que qualquer outra escapava do método e deixava o `IngestionRun` preso em `running`, sem `finished_at` e sem log.
+
+### Decisão
+Introduzir a hierarquia `App\Exceptions\GitHubClientException`, abstrata, com o método `failureCode()` devolvendo um código estável e seguro para log. O client passa a falhar explicitamente em toda resposta que não seja sucesso e em todo payload que não satisfaça o formato esperado, e `IngestionService::run()` captura a hierarquia inteira, encerrando o run por `fail()`. As categorias e seus códigos:
+
+- rate limit → `git_hub_rate_limit_exception` (403 com sinal de rate limit, e 429)
+- autenticação ou permissão → `github_authentication_failed` (401, e 403 sem sinal de rate limit)
+- repositório ou ref inexistente → `git_hub_repository_not_found_exception` (404)
+- conflito ou validação → `github_validation_failed` (409, 422)
+- erro transitório → `github_transient_error` (qualquer status `>= 500`, falha de conexão, timeout)
+- payload malformado → `github_malformed_response` (corpo não-JSON, corpo sem `tree`, base64 inválido, encoding não suportado)
+- árvore truncada → `github_tree_truncated`
+
+Os dois códigos herdados mantêm o formato derivado do nome da classe porque há asserção literal em teste existente, e alterar expectativa de teste para acomodar estética seria degradar evidência. Códigos novos usam literais explícitos. A distinção entre 403 de rate limit e 403 de permissão é feita pelo cabeçalho de rate limit, não pelo status isolado.
+
+Decisões de escopo tomadas junto: árvore truncada encerra como `failed`, e não como `partial`, porque um inventário incompleto ingerido parcialmente acionaria a reconciliação do ADR-10 e apagaria comandos que apenas não vieram na resposta; a falha de um único arquivo também derruba o run inteiro, preservando o comportamento de abortar que já existia. Retry e backoff ficam fora, na Prioridade 8.
+
+### Consequências
+Nenhuma resposta de erro do GitHub pode mais terminar como sucesso vazio, e todo run que falha carrega um código estável em `IngestionRun.log`, na chave `code` que já existia. A assinatura de `IngestionService::fail()` e a estrutura das entradas de `log` não mudaram, então consumidores a jusante — telemetria e correlação de eventos — leem a taxonomia sem migração. O teste de transitório usa `>= 500` em vez de lista de status, de modo que qualquer 5xx futuro é coberto sem alteração. O caminho 304/ETag do ADR-11 retorna antes de qualquer verificação de erro e segue inalterado: o run permanece `success` e registra `document_not_modified`. O trade-off é rigidez deliberada — uma indisponibilidade momentânea do GitHub agora reprova o run inteiro em vez de ingerir o que deu, e é exatamente por isso que a ação de retry da Prioridade 8 se torna mais necessária. Mensagens de exceção carregam apenas repositório, caminho e status; nunca o token, o cabeçalho `Authorization` ou o corpo da resposta.
+
+## ADR-28 — Sanitização de HTML no servidor em duas camadas
 
 ### Contexto
 `content_html` é derivado de Markdown de terceiros vindo do GitHub. Até então a conversão usava `GithubFlavoredMarkdownConverter` sem configuração, o que mantém os padrões `html_input=allow` e links inseguros permitidos, e a sanitização existia apenas no Angular (`MarkdownRendererService`, ADR-18). Qualquer outro consumidor da API — export, integração, client alternativo, view administrativa — recebia HTML executável. Documentos ingeridos antes da correção já estavam gravados com esse HTML.
@@ -305,4 +339,4 @@ Sanitizar no backend em duas camadas, com um allowlist próprio de tags e atribu
 `href`/`src` aceitam apenas `http`, `https`, `mailto` e caminhos relativos, com remoção de bytes de controle antes da checagem de esquema. A sanitização do Angular permanece como defesa em profundidade.
 
 ### Consequências
-Documentos antigos ficam cobertos sem migração nem reprocessamento: a coluna armazenada permanece como está e a sanitização acontece na saída, o que satisfaz a lei DATA sem escrita em dado existente. A proteção não depende do filtro interno do `league/commonmark`, o que neutraliza a classe de bypass por bytes de controle do `CVE-2026-71478` (versão instalada 2.8.2) independentemente da atualização daquele pacote. O custo é sanitizar a cada leitura; a operação é idempotente e o resultado de discovery já é cacheado por `DiscoveryCache`. Entradas cacheadas antes do deploy continuam cruas até expirar (300s), então o deploy desta mudança exige invalidar o cache de discovery.
+Documentos antigos ficam cobertos sem migração nem reprocessamento: a coluna armazenada permanece como está e a sanitização acontece na saída, o que satisfaz a lei DATA sem escrita em dado existente. A proteção não depende do filtro interno do `league/commonmark`, o que neutraliza a classe de bypass por bytes de controle do `CVE-2026-71478` (versão instalada 2.8.2) independentemente da atualização daquele pacote — complementar ao ADR-26, que trata a política de advisories por override de dependência. O custo é sanitizar a cada leitura; a operação é idempotente e o resultado de discovery já é cacheado por `DiscoveryCache`. Entradas cacheadas antes do deploy continuam cruas até expirar (300s), então o deploy desta mudança exige invalidar o cache de discovery.
