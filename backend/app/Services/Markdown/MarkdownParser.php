@@ -13,8 +13,22 @@ use Symfony\Component\Yaml\Yaml;
 
 class MarkdownParser
 {
+    /**
+     * Converter configuration hardened against script injection: raw HTML is
+     * escaped rather than passed through, and links/images using unsafe URL
+     * schemes (javascript:, data:, vbscript:, etc.) are stripped. This is the
+     * first sanitization layer; App\Services\Markdown\HtmlSanitizer is the
+     * second, tag/attribute-allowlist layer applied to the converted output.
+     *
+     * @var array<string, mixed>
+     */
+    private const SAFE_CONVERTER_CONFIG = [
+        'html_input' => 'escape',
+        'allow_unsafe_links' => false,
+    ];
+
     public function __construct(
-        private readonly GithubFlavoredMarkdownConverter $converter = new GithubFlavoredMarkdownConverter,
+        private readonly GithubFlavoredMarkdownConverter $converter = new GithubFlavoredMarkdownConverter(self::SAFE_CONVERTER_CONFIG),
     ) {}
 
     public function parse(GitHubMarkdownFile $file): ParsedDocument
@@ -35,7 +49,7 @@ class MarkdownParser
             title: $title,
             frontmatter: $frontmatter,
             contentRaw: $raw,
-            contentHtml: (string) $this->converter->convert($body),
+            contentHtml: HtmlSanitizer::sanitize((string) $this->converter->convert($body)),
             commands: $commands,
             warnings: $warnings,
         );

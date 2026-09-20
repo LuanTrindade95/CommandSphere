@@ -324,3 +324,19 @@ Decisões de escopo tomadas junto: árvore truncada encerra como `failed`, e nã
 
 ### Consequências
 Nenhuma resposta de erro do GitHub pode mais terminar como sucesso vazio, e todo run que falha carrega um código estável em `IngestionRun.log`, na chave `code` que já existia. A assinatura de `IngestionService::fail()` e a estrutura das entradas de `log` não mudaram, então consumidores a jusante — telemetria e correlação de eventos — leem a taxonomia sem migração. O teste de transitório usa `>= 500` em vez de lista de status, de modo que qualquer 5xx futuro é coberto sem alteração. O caminho 304/ETag do ADR-11 retorna antes de qualquer verificação de erro e segue inalterado: o run permanece `success` e registra `document_not_modified`. O trade-off é rigidez deliberada — uma indisponibilidade momentânea do GitHub agora reprova o run inteiro em vez de ingerir o que deu, e é exatamente por isso que a ação de retry da Prioridade 8 se torna mais necessária. Mensagens de exceção carregam apenas repositório, caminho e status; nunca o token, o cabeçalho `Authorization` ou o corpo da resposta.
+
+## ADR-28 — Sanitização de HTML no servidor em duas camadas
+
+### Contexto
+`content_html` é derivado de Markdown de terceiros vindo do GitHub. Até então a conversão usava `GithubFlavoredMarkdownConverter` sem configuração, o que mantém os padrões `html_input=allow` e links inseguros permitidos, e a sanitização existia apenas no Angular (`MarkdownRendererService`, ADR-18). Qualquer outro consumidor da API — export, integração, client alternativo, view administrativa — recebia HTML executável. Documentos ingeridos antes da correção já estavam gravados com esse HTML.
+
+### Decisão
+Sanitizar no backend em duas camadas, com um allowlist próprio de tags e atributos sobre `DOMDocument` (`App\Services\Markdown\HtmlSanitizer`), sem dependência nova:
+
+1. Na ingestão, o conversor passa a usar `html_input=escape` e `allow_unsafe_links=false`, e a saída é sanitizada antes de persistir.
+2. Na leitura, um accessor no model `Document` sanitiza `content_html` a cada acesso, sem reescrever a coluna.
+
+`href`/`src` aceitam apenas `http`, `https`, `mailto` e caminhos relativos, com remoção de bytes de controle antes da checagem de esquema. A sanitização do Angular permanece como defesa em profundidade.
+
+### Consequências
+Documentos antigos ficam cobertos sem migração nem reprocessamento: a coluna armazenada permanece como está e a sanitização acontece na saída, o que satisfaz a lei DATA sem escrita em dado existente. A proteção não depende do filtro interno do `league/commonmark`, o que neutraliza a classe de bypass por bytes de controle do `CVE-2026-71478` (versão instalada 2.8.2) independentemente da atualização daquele pacote — complementar ao ADR-26, que trata a política de advisories por override de dependência. O custo é sanitizar a cada leitura; a operação é idempotente e o resultado de discovery já é cacheado por `DiscoveryCache`. Entradas cacheadas antes do deploy continuam cruas até expirar (300s), então o deploy desta mudança exige invalidar o cache de discovery.
