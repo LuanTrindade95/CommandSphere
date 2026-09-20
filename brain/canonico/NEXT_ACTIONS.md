@@ -120,7 +120,7 @@ Risks:
 
 Problem: Analytics period is unbounded and system telemetry is mostly implicit in `IngestionRun.log`.
 
-Status: Analytics period bounds implemented in branch `fix/analytics-bounds`. Broader structured telemetry/correlation IDs remain a future observability phase.
+Status: Analytics period bounds implemented in branch `fix/analytics-bounds`. Correlation IDs and structured ingestion/webhook events implemented in branch `feature/ingestion-telemetry-correlation` (ADR-29). Remaining: propagate the ID to the GitHub call, Meilisearch indexing, and `CommandIndexUpdated`; add the other taxonomy events and duration/latency metrics; define retention for `storage/logs/telemetry.log`.
 
 Recommended direction:
 
@@ -131,7 +131,7 @@ Recommended direction:
 Acceptance criteria:
 
 - Analytics rejects invalid periods and caps expensive windows. `VALIDATED` by `DiscoveryApiTest`.
-- Logs/events include correlation IDs and relevant domain IDs.
+- Logs/events include correlation IDs and relevant domain IDs. `VALIDATED` for request -> run -> job -> run log -> telemetry events by `IngestionTelemetryTest`, `CorrelationIdTest`, and an independent audit.
 - Ingestion run detail can be debugged without server-log archaeology.
 
 Risks:

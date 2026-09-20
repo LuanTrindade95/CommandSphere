@@ -74,3 +74,15 @@ Consequences:
 - Transient categories are matched by range (`>= 500`), not by an enumerated list, so unseen statuses stay covered.
 - Failure messages carry identifiers and status only. Tokens, authorization headers, and response bodies never reach a log or an exception message.
 - Failing closed raises the cost of a transient outage. Retry belongs to the operator-facing surface, deliberately scoped, never smuggled into the client as silent recovery.
+
+## BRAIN-008 - Correlation IDs Are Validated At The Edge And Owned By The Record That Created Them
+
+Decision: Every API request carries a correlation ID. A client-supplied `X-Request-Id` is accepted only when it matches a fully anchored allowlist pattern; anything else is discarded and replaced by a generated ID, never sanitized in place. An operation record stores the ID of the request that created it, and structured events go to the additive `telemetry` channel, never to the default channel. See ADR-29.
+
+Consequences:
+
+- Anchoring uses the PCRE `D` modifier or `\z`. A bare `$` matches before a trailing newline, so a pattern without `D` accepts `"id\n"` and echoes it raw into response headers and persisted columns. Tests for a validation pattern cover trailing `\n`, `\r`, and `\r\n`, not only embedded line breaks.
+- A reused operation record is never rewritten with a later caller's ID. The later caller's ID appears only in its own event, which references the reused record.
+- The correlation ID is added as a field on existing log entries, not as a new entry, because tests assert log entries by index.
+- Telemetry context carries identifiers, counts, statuses, and failure codes only. Request payloads, headers, signatures, tokens, and Markdown content never reach it.
+- Failure codes in events are read from the `code` key already persisted by BRAIN-007, never recomputed.
