@@ -13,6 +13,10 @@
     "e2e": "playwright test"
   },
   "private": true,
+  "overrides": {
+    "pacote": "20.0.1",
+    "tar": "^7.5.21"
+  },
   "dependencies": {
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",

@@ -51,3 +51,13 @@ Consequences:
 - Public SSR pages may read catalog/search/plugin/command data.
 - Mutations, favorites, analytics actions, ingestion controls, and operational data require authenticated permission checks.
 - Invalid authenticated-looking requests must not silently fall back to anonymous scope.
+
+## BRAIN-006 - Dependency Advisories Are Closed Within The Current Major
+
+Decision: Security advisories are closed by updating locks inside the current majors, and by npm `overrides` when a transitive dependency is the only blocker. Audit gates are never weakened to make CI pass: no `--audit-level` downgrade, no `continue-on-error`, no `audit.ignore`, no `npm audit fix --force`.
+
+Consequences:
+
+- `critical` blocks the pipeline; `high` and `moderate` without a non-major fix are recorded as risk under ADR-24 and never reported as corrected.
+- An override that leaves the range declared by its dependent needs a recorded ADR stating the verified facts that justify it, as in ADR-26.
+- Toolchain major upgrades stay a deliberate, separately planned task.
