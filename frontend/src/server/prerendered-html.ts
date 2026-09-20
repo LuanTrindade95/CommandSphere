@@ -1,7 +1,22 @@
 /**
+ * True for any request path ending in `.html`, matched case-insensitively.
+ *
+ * Windows' filesystem is case-insensitive, so `express.static` would still
+ * resolve and serve the on-disk `index.html` for a request to `/INDEX.HTML`
+ * or `/Index.Html` there, bypassing the `renderAngular` detour below on a
+ * Windows host even though the comparison itself is case-sensitive. This
+ * does not happen on the case-sensitive Linux filesystem production runs on,
+ * but the check is case-insensitive everywhere so the behavior never depends
+ * on the host OS.
+ */
+export function isPrerenderedHtmlRequestPath(path: string): boolean {
+  return path.toLowerCase().endsWith('.html');
+}
+
+/**
  * Maps a request for a prerendered HTML file (`/index.html`,
- * `/search/index.html`, `/index.csr.html`) back to the SPA route Angular
- * actually knows about (`/`, `/search/`).
+ * `/search/index.html`, `/index.csr.html`, matched case-insensitively) back
+ * to the SPA route Angular actually knows about (`/`, `/search/`).
  *
  * The Angular CLI prerenders several routes as static `.html` files on disk.
  * Those files must never be served as inert static assets: they are full,
@@ -13,13 +28,14 @@
  */
 export function normalizePrerenderedHtmlPath(originalUrl: string): string {
   const [path, query] = originalUrl.split('?');
+  const lowerPath = path.toLowerCase();
 
-  if (path === '/index.html' || path === '/index.csr.html') {
+  if (lowerPath === '/index.html' || lowerPath === '/index.csr.html') {
     return query === undefined ? '/' : `/?${query}`;
   }
 
-  if (path.endsWith('/index.html')) {
-    const normalizedPath = path.slice(0, -'index.html'.length);
+  if (lowerPath.endsWith('/index.html')) {
+    const normalizedPath = path.slice(0, path.length - 'index.html'.length);
 
     return query === undefined ? normalizedPath : `${normalizedPath}?${query}`;
   }

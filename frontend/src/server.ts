@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bootstrap from './main.server';
 import { buildContentSecurityPolicy, generateCspNonce, resolveRuntimeBrowserConfig } from './server/content-security-policy';
-import { normalizePrerenderedHtmlPath } from './server/prerendered-html';
+import { isPrerenderedHtmlRequestPath, normalizePrerenderedHtmlPath } from './server/prerendered-html';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -52,7 +52,7 @@ app.get('/runtime-config.js', (_req, res) => {
 app.get(
   '**',
   (req, res, next) => {
-    if (req.path.endsWith('.html')) {
+    if (isPrerenderedHtmlRequestPath(req.path)) {
       next();
       return;
     }
