@@ -25,6 +25,15 @@ it('rejects null, empty, oversized, and unsafe correlation id values', function 
         ->and(CorrelationId::isValid('<script>'))->toBeFalse();
 });
 
+it('rejects a value with a trailing newline terminator instead of matching PCRE $ before it', function (): void {
+    // PCRE's "$" matches before a trailing newline unless the "D" modifier
+    // is set. Regression coverage for that specific gap: an otherwise-safe
+    // ID with a trailing \n, \r, or \r\n must never validate as safe.
+    expect(CorrelationId::isValid("injected-id\n"))->toBeFalse()
+        ->and(CorrelationId::isValid("injected-id\r"))->toBeFalse()
+        ->and(CorrelationId::isValid("injected-id\r\n"))->toBeFalse();
+});
+
 it('reuses a valid request-supplied id and falls back to a generated one otherwise', function (): void {
     $withValidHeader = Request::create('/api/v1/webhooks/github', 'POST');
     $withValidHeader->attributes->set(CorrelationId::REQUEST_ATTRIBUTE, 'client-supplied-id');

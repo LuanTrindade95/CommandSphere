@@ -223,6 +223,54 @@ it('discards an invalid X-Request-Id and substitutes a generated one everywhere 
     expect($run->correlation_id)->toBe($issuedId);
 });
 
+it('rejects a trailing-terminator X-Request-Id and substitutes a UUID in the header and the run column', function (string $terminator) {
+    telemetryPluginVersion();
+    config(['commandsphere.github.webhook_secret' => 'telemetry-secret']);
+    app()->bind(GitHubClient::class, fn () => new class implements GitHubClient
+    {
+        public function markdownFiles(Plugin $plugin, ?string $branch = null): array
+        {
+            return [telemetryMarkdownFile()];
+        }
+    });
+
+    $payload = signedTelemetryPayload([
+        'ref' => 'refs/heads/main',
+        'repository' => ['full_name' => 'commandsphere/telemetry-plugin'],
+    ], 'telemetry-secret');
+    $injectedRequestId = 'injected-id'.$terminator;
+
+    $response = $this->call(
+        'POST',
+        '/api/v1/webhooks/github',
+        server: [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => $payload['signature'],
+            'HTTP_X_REQUEST_ID' => $injectedRequestId,
+        ],
+        content: $payload['json'],
+    );
+
+    $response->assertAccepted();
+    $issuedId = $response->headers->get('X-Request-Id');
+
+    expect($issuedId)->not->toBeNull()
+        ->and($issuedId)->not->toBe($injectedRequestId)
+        ->and(CorrelationId::isValid($issuedId))->toBeTrue()
+        ->and(preg_match('/\A[0-9a-f-]{36}\z/i', $issuedId))->toBe(1);
+
+    $run = IngestionRun::query()->firstOrFail();
+
+    expect($run->correlation_id)->toBe($issuedId)
+        ->and($run->correlation_id)->not->toContain("\n")
+        ->and($run->correlation_id)->not->toContain("\r");
+})->with([
+    'trailing LF' => ["\n"],
+    'trailing CR' => ["\r"],
+    'trailing CRLF' => ["\r\n"],
+]);
+
 it('rejects an unsigned webhook and logs webhook.github.rejected with a correlation id', function (): void {
     telemetryPluginVersion();
     config(['commandsphere.github.webhook_secret' => 'telemetry-secret']);

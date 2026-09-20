@@ -17,7 +17,11 @@ use Illuminate\Support\Str;
  */
 final class CorrelationId
 {
-    private const PATTERN = '/^[A-Za-z0-9._:-]{1,128}$/';
+    // The "D" modifier forces "$" to match only at the absolute end of the
+    // subject, not before a trailing newline. Without it, PCRE's default
+    // behavior lets a value like "id\n" pass validation and be echoed back
+    // raw in the response header and persisted on the run row.
+    private const PATTERN = '/^[A-Za-z0-9._:-]{1,128}$/D';
 
     public const HEADER = 'X-Request-Id';
 
