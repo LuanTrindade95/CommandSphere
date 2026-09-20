@@ -100,6 +100,16 @@ MARKDOWN,
     );
 }
 
+function telemetryNotModifiedMarkdownFile(): GitHubMarkdownFile
+{
+    return new GitHubMarkdownFile(
+        path: 'docs/unchanged.md',
+        content: null,
+        etag: '"telemetry-unchanged-etag"',
+        notModified: true,
+    );
+}
+
 /**
  * @param  array<string, mixed>  $payload
  * @return array{json: string, signature: string}
@@ -121,7 +131,7 @@ it('propagates a valid X-Request-Id from a webhook to the run, log entries, and 
     {
         public function markdownFiles(Plugin $plugin, ?string $branch = null): array
         {
-            return [telemetryMarkdownFile()];
+            return [telemetryMarkdownFile(), telemetryNotModifiedMarkdownFile()];
         }
     });
 
@@ -150,6 +160,8 @@ it('propagates a valid X-Request-Id from a webhook to the run, log entries, and 
 
     expect($run->correlation_id)->toBe($requestId)
         ->and($run->status)->toBe('success')
+        ->and($run->log)->not->toBeEmpty()
+        ->and($run->log[0]['code'])->toBe('document_not_modified')
         ->and(collect($run->log)->pluck('correlation_id')->unique()->all())->toBe([$requestId]);
 
     $enqueued = telemetryEventsNamed('ingestion.enqueued');
