@@ -249,7 +249,8 @@ Risks:
 ## Backlog
 
 - Add Content Security Policy on Laravel and SSR Node responses.
-- Sanitize Markdown HTML server-side before storage or response.
+- Update `league/commonmark`, `guzzlehttp/guzzle`, `guzzlehttp/psr7`, and `phpseclib/phpseclib` to clear the 22 advisories reported by `composer audit`, including CVE-2026-71478 in commonmark 2.8.2. ADR-26 already neutralizes that link-filter bypass class independently, so this is dependency hygiene, not an open XSS hole.
+- Fix the two `runtime-config.spec.ts` Jest failures caused by Docker Compose environment variables leaking into the test `process.env`.
 - Harden GitHub client HTTP error taxonomy beyond 403/404.
 - Extract optional bearer-token user resolution shared by public discovery controllers.
 - Track Angular toolchain advisories from `npm audit`.
