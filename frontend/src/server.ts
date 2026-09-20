@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bootstrap from './main.server';
 import { buildContentSecurityPolicy, generateCspNonce, resolveRuntimeBrowserConfig } from './server/content-security-policy';
+import { normalizePrerenderedHtmlPath } from './server/prerendered-html';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -32,18 +33,35 @@ app.get('/', renderAngular);
 app.get('/runtime-config.js', (_req, res) => {
   res.type('application/javascript');
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Security-Policy', "default-src 'none'");
   res.send(runtimeConfigScript());
 });
 
 /**
- * Serve static files from /browser
+ * Serve static files from /browser, except prerendered HTML documents.
+ *
+ * The Angular CLI prerenders several routes (`/index.html`,
+ * `/search/index.html`, `/index.csr.html`, ...) as static files. Those are
+ * full, hydratable documents (they load `main-*.js` and bootstrap
+ * `<app-root>`), not inert assets, so serving them through `express.static`
+ * would ship them with no Content-Security-Policy, no per-request nonce, and
+ * a one-year `Cache-Control`. `.html` requests are skipped here and fall
+ * through to `renderAngular`, which sets the same strict CSP/nonce/no-store
+ * as every other route.
  */
 app.get(
   '**',
-  express.static(browserDistFolder, {
-    maxAge: '1y',
-    index: false
-  }),
+  (req, res, next) => {
+    if (req.path.endsWith('.html')) {
+      next();
+      return;
+    }
+
+    express.static(browserDistFolder, {
+      maxAge: '1y',
+      index: false,
+    })(req, res, next);
+  },
 );
 
 /**
@@ -53,7 +71,7 @@ app.get('**', renderAngular);
 
 function renderAngular(req: Request, res: Response, next: NextFunction): void {
   const { originalUrl, baseUrl } = req;
-  const requestUrl = publicUrlFor(originalUrl);
+  const requestUrl = publicUrlFor(normalizePrerenderedHtmlPath(originalUrl));
   const nonce = generateCspNonce();
 
   res.setHeader('Content-Security-Policy', buildContentSecurityPolicy(resolveRuntimeBrowserConfig(process.env, publicOrigin()), nonce));
