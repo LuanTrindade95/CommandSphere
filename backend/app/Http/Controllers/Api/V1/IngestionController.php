@@ -94,6 +94,7 @@ class IngestionController extends Controller
             'id' => $run->id,
             'plugin_version_id' => $run->plugin_version_id,
             'source' => $run->source,
+            'correlation_id' => $run->correlation_id,
             'status' => $run->status,
             'stats' => $run->stats,
             'log' => $run->log,
