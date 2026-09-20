@@ -2,9 +2,7 @@
 
 namespace App\Exceptions;
 
-use RuntimeException;
-
-class GitHubRateLimitException extends RuntimeException
+class GitHubRateLimitException extends GitHubClientException
 {
     public static function forRepository(string $repository): self
     {

@@ -272,7 +272,6 @@ Risks:
 
 - Add Content Security Policy on Laravel and SSR Node responses.
 - Sanitize Markdown HTML server-side before storage or response.
-- Harden GitHub client HTTP error taxonomy beyond 403/404.
 - Extract optional bearer-token user resolution shared by public discovery controllers.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.

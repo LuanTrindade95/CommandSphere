@@ -2,9 +2,7 @@
 
 namespace App\Exceptions;
 
-use RuntimeException;
-
-class GitHubRepositoryNotFoundException extends RuntimeException
+class GitHubRepositoryNotFoundException extends GitHubClientException
 {
     public static function forRepository(string $repository): self
     {

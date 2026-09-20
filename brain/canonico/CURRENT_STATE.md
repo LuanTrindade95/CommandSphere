@@ -15,6 +15,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Community-scoped permissions using Spatie teams with `community_id`.
 - Plugin and plugin version domain model with documents, commands, categories, favorites, views, and ingestion runs.
 - GitHub Markdown ingestion with ETag support, idempotent upserts, command extraction, stale command reconciliation, warnings, and partial run handling.
+- GitHub client fails closed: every non-success status and every malformed payload raises a `GitHubClientException` subtype, and `IngestionService::run()` ends the run as `failed` with a stable `failureCode()` in `IngestionRun.log`. A run can no longer finish `success` with zero documents because of an API error.
 - Search through Laravel Scout and Meilisearch with facets for community, plugin, and category.
 - Redis-backed discovery cache invalidated by a global version key after ingestion.
 - Favorites and command-view analytics with short-window dedupe.
@@ -172,3 +173,15 @@ Latest analytics hardening phase:
 - `/api/v1/analytics/most-viewed` now validates `days` as integer `1..COMMANDSPHERE_ANALYTICS_MAX_DAYS`.
 - Analytics response metadata now includes `days` and `max_days`.
 - Local tests isolate command-view dedupe from Meilisearch when search indexing is not the behavior under test.
+
+Active GitHub client remediation branch: `fix/github-client-fail-closed`.
+
+Latest ingestion resilience phase:
+
+- F-006 GitHub client fail-closed taxonomy.
+- `App\Exceptions\GitHubClientException` is the abstract base for every GitHub failure, exposing `failureCode()`.
+- Categories and codes: `git_hub_rate_limit_exception`, `github_authentication_failed`, `git_hub_repository_not_found_exception`, `github_validation_failed`, `github_transient_error`, `github_malformed_response`, `github_tree_truncated`.
+- A 403 is classified by the rate-limit header, not by status alone, so a permission denial is no longer reported as rate limiting.
+- Transient failures match `>= 500` plus connection errors, not an enumerated status list.
+- A truncated tree and an unreadable file both end the run as `failed`; neither degrades to `partial`.
+- `IngestionService::fail()` signature and `IngestionRun.log` entry shape are unchanged, so downstream consumers read the taxonomy through the existing `code` key.
