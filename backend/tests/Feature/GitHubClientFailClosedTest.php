@@ -23,30 +23,6 @@ use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
-/**
- * Every non-success response the GitHub API can return, mapped to the
- * stable failure code and exception type HttpGitHubClient must raise.
- * This is the "after" column of the F-006 fix; the "before" column
- * (documented once via a throwaway repro scaffold) showed every one of
- * these except 403-with-rate-limit-signal and 404 producing either a
- * silent empty tree or an uncaught RuntimeException.
- *
- * @return array<string, array{0: string, 1: string}>
- */
-function githubFailureScenarios(): array
-{
-    return [
-        '401 unauthenticated' => [GitHubAuthenticationException::class, 'github_authentication_failed'],
-        '403 without rate-limit signal (permission)' => [GitHubAuthenticationException::class, 'github_authentication_failed'],
-        '403 with rate-limit signal' => [GitHubRateLimitException::class, 'git_hub_rate_limit_exception'],
-        '429 secondary rate limit' => [GitHubRateLimitException::class, 'git_hub_rate_limit_exception'],
-        '409 conflict' => [GitHubValidationException::class, 'github_validation_failed'],
-        '422 unprocessable' => [GitHubValidationException::class, 'github_validation_failed'],
-        '500 server error' => [GitHubTransientErrorException::class, 'github_transient_error'],
-        '503 unavailable' => [GitHubTransientErrorException::class, 'github_transient_error'],
-    ];
-}
-
 function githubReproPlugin(): Plugin
 {
     return new Plugin([
