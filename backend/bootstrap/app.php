@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AssignCorrelationId;
 use App\Http\Middleware\EnsureCommunityPermission;
 use App\Http\Middleware\EnsurePluginPermission;
 use App\Http\Middleware\ForceJsonResponse;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
 
         $middleware->api(prepend: [
+            AssignCorrelationId::class,
             ForceJsonResponse::class,
         ]);
 

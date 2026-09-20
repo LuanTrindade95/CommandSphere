@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -121,6 +122,20 @@ return [
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
+        ],
+
+        // Dedicated structured-event channel for App\Support\Telemetry
+        // (F-011 correlation ID / domain event taxonomy). Additive: does
+        // not participate in the default "stack"/"single" channels, so it
+        // never changes the format or destination of framework logging.
+        'telemetry' => [
+            'driver' => 'monolog',
+            'handler' => StreamHandler::class,
+            'with' => [
+                'stream' => storage_path('logs/telemetry.log'),
+            ],
+            'formatter' => JsonFormatter::class,
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'emergency' => [
