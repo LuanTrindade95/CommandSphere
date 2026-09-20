@@ -246,6 +246,8 @@ Fix before public deployment.
 
 Severity: Medium
 
+Status: Mitigated in `fix/server-side-html-sanitization`.
+
 Evidence:
 
 - Backend stores and returns `content_html` through `DocumentResource`.

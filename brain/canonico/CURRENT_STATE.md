@@ -25,6 +25,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Angular SSR shell with lazy standalone routes, Signals-based UI state, Transloco i18n, command palette, protected routes, and reusable UI components.
 - Browser/SSR runtime configuration separates internal SSR API calls from public browser API, Reverb, allowed hosts, and canonical public origin.
 - Markdown viewer sanitization and heading/code enhancement.
+- Server-side HTML sanitization of `content_html` in two layers: allowlist sanitizer applied at ingestion and again through a `Document` accessor on every read, so stored documents are served sanitized without rewriting the column.
 - SEO metadata, canonical URLs, Open Graph, JSON-LD, robots, sitemap, and portfolio screenshots, with SSR post-processing normalizing public origin metadata.
 - Development and production-like Docker Compose stacks.
 
@@ -59,6 +60,7 @@ Important implementation anchors:
 
 - `App\Services\Ingestion\IngestionService`
 - `App\Services\Markdown\MarkdownParser`
+- `App\Services\Markdown\HtmlSanitizer`
 - `App\Services\Discovery\DiscoveryAccess`
 - `App\Services\Discovery\DiscoveryCache`
 - `App\Contracts\GitHubClient`
@@ -185,3 +187,14 @@ Latest ingestion resilience phase:
 - Transient failures match `>= 500` plus connection errors, not an enumerated status list.
 - A truncated tree and an unreadable file both end the run as `failed`; neither degrades to `partial`.
 - `IngestionService::fail()` signature and `IngestionRun.log` entry shape are unchanged, so downstream consumers read the taxonomy through the existing `code` key.
+
+Active sanitization remediation branch: `fix/server-side-html-sanitization`.
+
+Latest sanitization hardening phase:
+
+- F-009 server-side sanitization boundary (see ADR-28).
+- Markdown conversion now runs with `html_input=escape` and `allow_unsafe_links=false`.
+- `HtmlSanitizer` applies a tag/attribute allowlist over `DOMDocument`; `href`/`src` accept only `http`, `https`, `mailto`, and relative paths, with control bytes stripped before the scheme check.
+- A `Document` accessor sanitizes `content_html` on every read, so rows stored before the fix are served sanitized without any data migration.
+- Angular `MarkdownRendererService` is untouched and remains defense in depth.
+- Gates: Pest `VALIDATED` (55 passed), Pint `VALIDATED` (118 files). `composer audit` reports 22 pre-existing advisories in 4 packages, and Jest has 2 pre-existing failures in `runtime-config.spec.ts`; both sets are identical to the `a3a8299` baseline and unrelated to this change.

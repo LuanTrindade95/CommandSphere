@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\Markdown\HtmlSanitizer;
 use Database\Factories\DocumentFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +37,22 @@ class Document extends Model
         return [
             'frontmatter' => 'array',
         ];
+    }
+
+    /**
+     * Sanitizes `content_html` on every read so the API never returns
+     * script-capable markup, regardless of how the stored value was written
+     * (ingestion pipeline, factory, seed, or a row inserted before the
+     * sanitizer existed). The stored value itself is never mutated by this
+     * accessor.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function contentHtml(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): string => HtmlSanitizer::sanitize($value),
+        );
     }
 
     /**
