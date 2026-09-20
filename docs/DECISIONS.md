@@ -290,3 +290,14 @@ Adicionar Dockerfiles multi-stage para backend PHP-FPM e frontend Node SSR, alé
 
 ### Consequências
 A stack pode ser validada localmente com `docker compose -f docker-compose.prod.yml up -d --build`, preservando separação entre runtime PHP-FPM, SSR Node e serviços de dados. O trade-off é manter dois caminhos Docker: dev com DX/testes e prod com empacotamento mais fiel ao deploy.
+
+## ADR-26 — Override de `pacote` para fechar vulnerabilidade crítica sem upgrade de major
+
+### Contexto
+O CI da `main` ficou vermelho desde o merge do PR #1 por auditoria de dependências. No frontend, a única vulnerabilidade `critical` era `tar <=7.5.20` (path traversal por hardlink/symlink), alcançada de forma transitiva. `@angular/cli@19.2.27` fixa `pacote` em `20.0.0` exato, e `pacote@20.0.0` depende de `tar ^6.1.11` — uma linha que nunca recebeu patch de segurança. Sem tocar nessa cadeia, a critical só fecharia com upgrade de major da toolchain Angular, fora do escopo da correção.
+
+### Decisão
+Declarar em `frontend/package.json` os overrides `"pacote": "20.0.1"` e `"tar": "^7.5.21"`. A versão forçada de `pacote` está fora do pin exato declarado pelo `@angular/cli`, e isso é aceito conscientemente como exceção, com base nestes fatos verificados: a única diferença de dependências entre `pacote@20.0.0` e `20.0.1` é `tar: ^6.1.11 -> ^7.5.10`, com `engines` e `bin` idênticos; `pacote` é usado apenas por `ng update` e `ng add`, nunca em build, teste, SSR ou runtime; com `tar ^7.5.21`, os requisitos de `cacache` (`^7.4.3`), `node-gyp` (`^7.4.3`) e `pacote@20.0.1` (`^7.5.10`) são satisfeitos pela mesma versão resolvida, e `npm ls` não reporta `invalid`.
+
+### Consequências
+`npm audit --audit-level=critical` volta a sair com código 0 sem afrouxar o gate, sem `npm audit fix --force` e sem upgrade de major. O custo é um ponto de manutenção: no upgrade da toolchain Angular os dois overrides devem ser reavaliados e removidos assim que a cadeia oficial trouxer `tar` 7.x. Vulnerabilidades `high` e `moderate` remanescentes seguem a política do ADR-24: registradas como risco, nunca declaradas corrigidas.

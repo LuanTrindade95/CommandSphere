@@ -1,6 +1,6 @@
 # Next Actions
 
-Updated: 2026-06-13
+Updated: 2026-09-20
 
 This roadmap is intentionally product-oriented. New work should strengthen portfolio signal, production realism, and architecture maturity rather than adding generic CRUD.
 
@@ -86,7 +86,7 @@ Recommended direction:
 
 Acceptance criteria:
 
-- CI proves backend tests, frontend tests, SSR build, dependency audits, and service-backed search behavior. `CONFIGURED`; pending remote Actions execution.
+- CI proves backend tests, frontend tests, SSR build, dependency audits, and service-backed search behavior. `VALIDATED` by run `35485832903` on `main` (`8623fea`), both jobs `success`.
 - CI logs clearly distinguish skipped, pending, and executed integration checks.
 
 Risks:
@@ -246,13 +246,34 @@ Risks:
 
 - Avoid pretending a provider-specific deployment exists unless it has been validated.
 
+## Priority 12 - Dependency Advisory Follow-Up
+
+Problem: CI is green, but part of the dependency risk is deliberately carried instead of fixed. Two overrides exist as a maintenance point, and the Backend green on CI is weaker than the local green.
+
+Recommended direction:
+
+- Re-evaluate the `pacote` and `tar` overrides in `frontend/package.json` at every Angular toolchain upgrade and drop them once the official chain resolves `tar` 7.x (ADR-26).
+- Close `@sigstore/sign` and `@sigstore/verify`, the only remaining advisories reporting `fixAvailable: true`.
+- Plan the Angular major upgrade that closes the remaining runtime/toolchain advisories (`@angular/*@22.x`, `@angular-devkit/build-angular@21.2.24`+), as a task of its own.
+- Investigate the Pest warnings on the GitHub runner: `32 warnings, 1 passed` there versus `33 passed (191 assertions)` in the dev container, caused by `file_get_contents` on runner paths.
+- Update the deprecated `actions/checkout@v4` and `actions/setup-node@v4`, and plan the `ubuntu-latest` migration to Ubuntu 26 starting October 19, 2026.
+
+Acceptance criteria:
+
+- Overrides are either still justified by recorded facts or removed.
+- Backend Pest reports the same passing count on CI and locally, with no warnings masking the result.
+- Audit gates stay at `--audit-level=critical` with no weakening.
+
+Risks:
+
+- An Angular major upgrade touches SSR, build and tests at once; it needs its own branch, gates and audit.
+
 ## Backlog
 
 - Add Content Security Policy on Laravel and SSR Node responses.
 - Sanitize Markdown HTML server-side before storage or response.
 - Harden GitHub client HTTP error taxonomy beyond 403/404.
 - Extract optional bearer-token user resolution shared by public discovery controllers.
-- Track Angular toolchain advisories from `npm audit`.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.
 - Export command/document references.

@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-06-13
+Updated: 2026-09-20
 
 ## Product Status
 
@@ -110,9 +110,20 @@ Current Brain bootstrap did not rerun the full product gate set because this cha
 
 ## Current Branch Context
 
+`main` is the current integration point and its CI is green: run `35485832903` on commit `8623fea` finished with `success` in both jobs, Backend and Frontend. Before that, `main` had been red since the merge of PR #1, failing only on dependency audit steps.
+
 This Brain was bootstrapped on branch `docs/commandsphere-brain-documentation`, created from `feature/commandsphere-portfolio-v1-polish`.
 
-Active remediation branch: `fix/runtime-production-config`.
+Remediation branch merged into `main` through PR #5: `fix/ci-dependency-advisories`.
+
+Dependency advisory phase:
+
+- Backend locks updated inside the current majors: guzzle `7.11.0 -> 7.15.5`, psr7 `2.11.0 -> 2.13.1`, commonmark `2.8.2 -> 2.10.1`, phpseclib `3.0.52 -> 3.0.57`. `composer audit` reports no advisories; `backend/composer.json` was not touched.
+- The frontend `critical` (`tar`, path traversal) is closed through the `pacote` and `tar` overrides recorded in ADR-26. `npm audit --audit-level=critical` exits 0.
+- Remaining `high` and `moderate` advisories belong to the Angular runtime and toolchain and have no non-major fix; `19.2.25` is the last published release of the Angular 19 runtime line. They are recorded as risk under ADR-24, not as corrected.
+- Backend Pest on the GitHub runner reports `32 warnings, 1 passed` while the same suite in the dev container reports `33 passed (191 assertions)`. The warnings come from `file_get_contents` on runner paths. The suite is byte-identical to the previous `main`, so this is a runner environment condition, not a skipped test — but it makes the Backend green on CI weaker than the local green.
+
+Earlier remediation branch: `fix/runtime-production-config`.
 
 Latest build-loop phase completed in this branch:
 
