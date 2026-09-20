@@ -130,6 +130,7 @@ return [
         // never changes the format or destination of framework logging.
         'telemetry' => [
             'driver' => 'monolog',
+            'name' => 'telemetry',
             'handler' => StreamHandler::class,
             'with' => [
                 'stream' => storage_path('logs/telemetry.log'),
