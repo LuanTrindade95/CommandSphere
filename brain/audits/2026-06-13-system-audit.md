@@ -16,6 +16,8 @@ Remediation update: F-005 was addressed in branch `fix/analytics-bounds`. The an
 
 Remediation update: F-006 was addressed in branch `fix/github-client-fail-closed`. The GitHub client now fails closed on every non-success status and every malformed payload, through the `GitHubClientException` hierarchy whose `failureCode()` persists a stable code in `IngestionRun.log`. `IngestionService::run()` catches the whole hierarchy, so no GitHub failure escapes the run and leaves it stuck in `running`. Taxonomy and scope trade-offs are recorded in ADR-27.
 
+Remediation update: F-008 was addressed in branch `fix/security-content-policy`. The SSR sends an enforced CSP on every HTML response, prerendered documents included, with a per-request `style-src` nonce, no `unsafe-inline` or `unsafe-eval`, and `connect-src` built from the same runtime configuration served at `/runtime-config.js`. The API sends `default-src 'none'` on every response, error responses included. Policy and trade-offs are recorded in ADR-30.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -222,6 +224,8 @@ Fix with ingestion observability/retry work.
 ### F-008 - Security Headers Lack Content Security Policy
 
 Severity: Medium
+
+Status: Mitigated in `fix/security-content-policy`.
 
 Evidence:
 

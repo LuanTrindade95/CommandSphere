@@ -86,3 +86,16 @@ Consequences:
 - The correlation ID is added as a field on existing log entries, not as a new entry, because tests assert log entries by index.
 - Telemetry context carries identifiers, counts, statuses, and failure codes only. Request payloads, headers, signatures, tokens, and Markdown content never reach it.
 - Failure codes in events are read from the `code` key already persisted by BRAIN-007, never recomputed.
+
+## BRAIN-009 - Every Response Carries An Enforced CSP With No Inline Exceptions
+
+Decision: Every HTML and JSON response carries an enforced Content-Security-Policy, never a report-only one. The SSR policy admits no `unsafe-inline` and no `unsafe-eval`; inline styles are allowed only through a per-request nonce, and the origins in `connect-src` come from the runtime configuration, never from a fixed host. See ADR-30.
+
+Consequences:
+
+- A response path that bypasses the Angular render still carries the policy: static file serving, a handler registered before the renderer, a prerendered document. A policy that covers only the rendered routes is the failure this decision exists to prevent.
+- Matching a request path against a file extension is case-insensitive. A case-insensitive filesystem serves `/INDEX.HTML` from the same file as `/index.html`, so a case-sensitive check reopens the bypass.
+- Headers that must reach every API response are set by global middleware, not by a route group. Requests that match no route never run group middleware, so a header set there is absent from 404 and 405 responses.
+- Components do not use `[style.*]` bindings or `style=""` attributes. Enumerable values become classes; continuous values become SVG geometry attributes. `style-src-attr 'unsafe-inline'` requires a recorded decision.
+- HTML carrying a nonce is never cacheable. A cache or proxy placed in front of the SSR must not cache HTML or rewrite the header.
+- The policy is proven in a real browser, not only by header assertions: an injected inline script and an inline event handler must both be blocked and reported as violations.
