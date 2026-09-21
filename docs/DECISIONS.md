@@ -340,3 +340,19 @@ Sanitizar no backend em duas camadas, com um allowlist próprio de tags e atribu
 
 ### Consequências
 Documentos antigos ficam cobertos sem migração nem reprocessamento: a coluna armazenada permanece como está e a sanitização acontece na saída, o que satisfaz a lei DATA sem escrita em dado existente. A proteção não depende do filtro interno do `league/commonmark`, o que neutraliza a classe de bypass por bytes de controle do `CVE-2026-71478` (versão instalada 2.8.2) independentemente da atualização daquele pacote — complementar ao ADR-26, que trata a política de advisories por override de dependência. O custo é sanitizar a cada leitura; a operação é idempotente e o resultado de discovery já é cacheado por `DiscoveryCache`. Entradas cacheadas antes do deploy continuam cruas até expirar (300s), então o deploy desta mudança exige invalidar o cache de discovery.
+
+## ADR-29 — Correlation ID e telemetria estruturada no fluxo de ingestão
+
+### Contexto
+Não havia como seguir um incidente de ponta a ponta — request do webhook, run de ingestão, job na fila, falha do GitHub. Não existia nenhuma chamada a `Log::` em `backend/app/`, o canal padrão era `stack` → `single` em texto livre, e as entradas de `IngestionRun.log` não carregavam identificador de correlação (F-011).
+
+### Decisão
+- O middleware `AssignCorrelationId`, em prepend na stack `api`, aceita o `X-Request-Id` recebido apenas se casar `^[A-Za-z0-9._:-]{1,128}$` com o modificador `D`; caso contrário gera um UUID. O ID é devolvido no cabeçalho da resposta. Sem o `D`, o `$` do PCRE casa antes de um newline final e o valor cru seria ecoado no cabeçalho e persistido — o modificador é obrigatório e está coberto por teste de regressão para `\n`, `\r` e `\r\n` finais.
+- A coluna aditiva `ingestion_runs.correlation_id`, nullable e indexada, é gravada na criação do run. O job não carrega o ID: recarrega o run pelo `ingestionRunId` e lê a coluna.
+- Um run reaproveitado por `IngestionService::start()` mantém o ID de quem o criou. A chamada que o reaproveitou registra o próprio ID apenas no evento `ingestion.enqueued`, com `reused: true`. Histórico de run não é reescrito.
+- Cada entrada de `IngestionRun.log` ganha o campo `correlation_id`. Nenhuma entrada nova é acrescentada, o que preserva asserções existentes por índice.
+- Um canal `telemetry` aditivo (Monolog com `JsonFormatter`, arquivo `storage/logs/telemetry.log`) recebe os eventos por `App\Support\Telemetry::event()`: `ingestion.enqueued`, `ingestion.started`, `ingestion.completed`, `ingestion.failed`, `webhook.github.accepted` e `webhook.github.rejected`. O canal `default` não muda. `ingestion.failed` lê o código da chave `code` já persistida, sem recomputar nem criar vocabulário paralelo (ADR-27, BRAIN-007).
+- O sync agendado gera um ID por run, não compartilhado no lote.
+
+### Consequências
+Um incidente pode ser seguido por um único ID da requisição ao run, ao job, a cada entrada do log do run e aos eventos estruturados, sem dependência nova nem infraestrutura externa. Runs anteriores à migration ficam com `correlation_id` nulo e continuam legíveis na API e no admin. O contexto de telemetria é montado apenas com identificadores, contagens, status e códigos: token, cabeçalho `Authorization`, assinatura do webhook, segredo e conteúdo Markdown não entram no log. Limites atuais: a chamada ao GitHub, a indexação no Meilisearch e o evento `CommandIndexUpdated` não carregam o ID, e o broadcast `IngestionRunStatusChanged` o leva apenas indiretamente, dentro das entradas de `log`. Os demais eventos da taxonomia da auditoria (`plugin.created`, `search.executed`, `realtime.broadcast.failed` e outros) e as métricas de duração e latência ficam fora. O `telemetry.log` usa `StreamHandler` sem rotação e cresce sem limite até que uma política de retenção seja definida.

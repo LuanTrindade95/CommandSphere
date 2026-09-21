@@ -296,6 +296,8 @@ Fix alongside production deployment runbook.
 
 Severity: Medium
 
+Status: Partially mitigated in `feature/ingestion-telemetry-correlation` (ADR-29). Request -> run -> job -> run log -> structured events are correlated by one ID; the GitHub call, Meilisearch indexing, `CommandIndexUpdated`, `plugin.created`, index-updated events, and duration/latency metrics are not yet covered.
+
 Evidence:
 
 - Ingestion logs are persisted as JSON arrays in `IngestionRun.log`.

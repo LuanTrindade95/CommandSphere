@@ -198,3 +198,16 @@ Latest sanitization hardening phase:
 - A `Document` accessor sanitizes `content_html` on every read, so rows stored before the fix are served sanitized without any data migration.
 - Angular `MarkdownRendererService` is untouched and remains defense in depth.
 - Gates: Pest `VALIDATED` (55 passed), Pint `VALIDATED` (118 files). `composer audit` reports 22 pre-existing advisories in 4 packages, and Jest has 2 pre-existing failures in `runtime-config.spec.ts`; both sets are identical to the `a3a8299` baseline and unrelated to this change.
+
+Active telemetry remediation branch: `feature/ingestion-telemetry-correlation`.
+
+Latest observability phase:
+
+- F-011 correlation IDs and structured events, partially (see ADR-29).
+- `AssignCorrelationId` runs in prepend on the `api` stack: a client `X-Request-Id` is accepted only if it matches `^[A-Za-z0-9._:-]{1,128}$` with the PCRE `D` modifier, otherwise a UUID is generated; the ID is returned in the response header.
+- `ingestion_runs.correlation_id` (nullable, indexed, additive) is written when the run is created; the job reloads the run and reads it. Runs created before the migration keep `null` and stay readable.
+- A run reused by `IngestionService::start()` keeps its creator's ID; the reusing caller's ID appears only in its `ingestion.enqueued` event with `reused: true`.
+- Every `IngestionRun.log` entry carries a `correlation_id` field; no entry is added.
+- Additive `telemetry` channel (Monolog `JsonFormatter`, `storage/logs/telemetry.log`) emits `ingestion.enqueued`, `ingestion.started`, `ingestion.completed`, `ingestion.failed`, `webhook.github.accepted`, and `webhook.github.rejected` through `App\Support\Telemetry::event()`. The default channel is unchanged.
+- Not yet correlated: the GitHub call, Meilisearch indexing, and `CommandIndexUpdated`; `IngestionRunStatusChanged` carries the ID only inside `log` entries. `telemetry.log` has no rotation.
+- Gates: locally on base `25bbb3c`, Pest `VALIDATED` (64 passed) and Pint `VALIDATED` (128 files), with independent audit approved. Combined suite after merging `29a7881`, `VALIDATED` by pull request CI on `3e7b3a1`: 86 tests, 0 failed, 0 skipped. In CI every Feature test reports a warning (`60 warnings, 26 passed`); the same pattern exists on `main` since at least `25bbb3c`, does not occur locally, and its cause is not yet identified.

@@ -18,6 +18,7 @@ class IngestionRun extends Model
     protected $fillable = [
         'plugin_version_id',
         'source',
+        'correlation_id',
         'status',
         'stats',
         'log',
