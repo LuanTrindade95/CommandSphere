@@ -25,7 +25,7 @@ The default log channel, the webhook HMAC check, `IngestionService::fail()` sign
 - First independent audit: REJECTED on hostile input. The validation pattern used a bare `$`, so a `X-Request-Id` ending in `\n` was echoed raw in the response header and persisted in the run column. Fixed in `a388496` with the PCRE `D` modifier plus regression cases for trailing `\n`, `\r`, and `\r\n`.
 - Second independent audit: APPROVED. The auditor rebuilt the image, matched file hashes inside and outside the container, and re-ran every roadmap item with its own probe: end-to-end propagation for webhook, manual, and scheduled sync; seven hostile `X-Request-Id` values replaced by UUIDs; `ingestion.failed` with `github_transient_error` on a forced 500; valid JSON for all six events; no token, `Authorization`, `Bearer`, signature, secret, or Markdown canary in `telemetry.log`, `laravel.log`, or run logs; pre-migration runs returning 200 with `correlation_id: null`.
 - Gates on base `25bbb3c`: Pest 64 passed, Pint 128 files, no `skip`.
-- Combined suite after merging `origin/main` at `29a7881` (server-side sanitization): `PENDING` locally because Docker Desktop stopped responding during the run; the merge had no conflicts and touched no C5 file. The pull request CI is the gate of record for the combined suite.
+- Combined suite after merging `origin/main` at `29a7881` (server-side sanitization): not run locally because Docker Desktop stopped responding; the merge had no conflicts and touched no C5 file. Pull request CI on `3e7b3a1` passed all 4 checks: Pest 86 tests, 0 failed, 0 skipped, 400 assertions.
 
 ## Environment traps
 
@@ -39,3 +39,4 @@ The default log channel, the webhook HMAC check, `IngestionService::fail()` sign
 - Remaining taxonomy events (`plugin.created`, `search.executed`, `realtime.broadcast.failed`, and others) and duration/latency metrics.
 - Retention and rotation for `storage/logs/telemetry.log`, which currently uses a plain `StreamHandler`.
 - `composer audit` was not part of this item's verification.
+- In CI, every Feature test reports a Pest warning while Unit tests pass cleanly (`60 warnings, 26 passed` on this branch; `51 warnings, 21 passed` on `main` at `29a7881`; `49 warnings, 1 passed` at `25bbb3c`). Local runs show no warnings. The checks stay green, but the cause is not identified and the warning hides any new one.
