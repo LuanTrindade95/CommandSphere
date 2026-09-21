@@ -356,3 +356,22 @@ Não havia como seguir um incidente de ponta a ponta — request do webhook, run
 
 ### Consequências
 Um incidente pode ser seguido por um único ID da requisição ao run, ao job, a cada entrada do log do run e aos eventos estruturados, sem dependência nova nem infraestrutura externa. Runs anteriores à migration ficam com `correlation_id` nulo e continuam legíveis na API e no admin. O contexto de telemetria é montado apenas com identificadores, contagens, status e códigos: token, cabeçalho `Authorization`, assinatura do webhook, segredo e conteúdo Markdown não entram no log. Limites atuais: a chamada ao GitHub, a indexação no Meilisearch e o evento `CommandIndexUpdated` não carregam o ID, e o broadcast `IngestionRunStatusChanged` o leva apenas indiretamente, dentro das entradas de `log`. Os demais eventos da taxonomia da auditoria (`plugin.created`, `search.executed`, `realtime.broadcast.failed` e outros) e as métricas de duração e latência ficam fora. O `telemetry.log` usa `StreamHandler` sem rotação e cresce sem limite até que uma política de retenção seja definida.
+
+## ADR-30 — Content Security Policy estrita com nonce por requisição
+
+### Contexto
+Nem a API Laravel nem o SSR Node enviavam `Content-Security-Policy` (F-008). O app renderiza HTML derivado de Markdown de terceiros; a sanitização no Angular (ADR-18) e no servidor (ADR-28) é a primeira barreira, e faltava a segunda, aplicada pelo browser. Três pontos impediam uma política estrita sem `unsafe-inline`: o `CommonEngine` do Angular SSR injetava CSS crítico inline, com handler `onload`, nas rotas renderizadas dinamicamente; componentes usavam bindings `[style.*]`, que o SSR serializa como atributo `style=""`; e o `express.static` respondia os HTML prerrenderizados antes do render, sem cabeçalho nenhum e com cache de um ano.
+
+### Decisão
+- O SSR aplica a CSP por requisição: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'nonce-<por requisição>'`, `img-src 'self' data: https:`, `font-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` e `frame-ancestors 'none'`. O nonce chega ao Angular pelo atributo `ngCspNonce` do `app-root`.
+- `script-src` dispensa nonce porque nenhum script inline executa: o transfer state e o JSON-LD são blocos `application/json` e `application/ld+json`.
+- `connect-src` é montado pela mesma função que gera o `/runtime-config.js` (`resolveRuntimeBrowserConfig`, a partir de `COMMANDSPHERE_API_PUBLIC_URL` e `COMMANDSPHERE_REVERB_PUBLIC_*`), então a política e a configuração que o browser recebe não podem divergir. Nenhum host é fixo. A origem da API só entra quando difere da origem do próprio SSR, e o esquema do Reverb define `ws:` ou `wss:`.
+- O HTML sai com `Cache-Control: no-store`, porque um nonce cacheado deixa de ser nonce.
+- Requisições `*.html`, sem diferenciar caixa, não passam pelo `express.static`: caem no render e recebem a mesma política. `/runtime-config.js` recebe `default-src 'none'`.
+- A inlining de CSS crítico fica desligada no build (`angular.json`) e no `CommonEngine.render`.
+- Valores de estilo enumeráveis viram classes Tailwind estáticas. O único valor contínuo, a barra de analytics, virou atributo de geometria SVG, que `style-src` não rege.
+- A API, que serve apenas JSON, envia `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'` em toda resposta, inclusive nas de erro. O `SecurityHeaders` fica no stack global de middleware, de modo que nenhum grupo de rota o contorna.
+- A política é aplicada, não report-only. Os cabeçalhos anteriores (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) permanecem.
+
+### Consequências
+A política não tem `unsafe-inline` nem `unsafe-eval`, e não há curinga em `script-src` nem em `connect-src`. `img-src https:` é a única abertura, deliberada, para não quebrar as imagens da documentação ingerida; o custo é expor o acesso a hosts de imagem arbitrários, atenuado pelo `Referrer-Policy`. Um proxy ou CDN colocado na frente do SSR não pode cachear HTML nem reescrever o cabeçalho. Componente novo que precise de estilo dinâmico com valor não enumerável usa atributo ou geometria SVG; `style-src-attr 'unsafe-inline'` só entra com decisão registrada (BRAIN-009). Esta é a camada acima do ADR-28, não um substituto dele.
