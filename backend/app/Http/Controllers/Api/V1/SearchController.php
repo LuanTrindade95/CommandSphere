@@ -7,17 +7,17 @@ use App\Http\Resources\CommandResource;
 use App\Models\Command;
 use App\Models\Community;
 use App\Models\User;
+use App\Services\Auth\OptionalBearerUserResolver;
 use App\Services\Discovery\DiscoveryAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class SearchController extends Controller
 {
-    public function __invoke(Request $request, DiscoveryAccess $access): JsonResponse
+    public function __invoke(Request $request, DiscoveryAccess $access, OptionalBearerUserResolver $userResolver): JsonResponse
     {
-        $user = $this->currentUser($request);
+        $user = $userResolver->resolve($request);
         $term = (string) $request->query('q', '');
         $filters = $this->filters($request, $access, $user);
 
@@ -107,31 +107,5 @@ class SearchController extends Controller
     private function quote(string $value): string
     {
         return '"'.str_replace('"', '\"', $value).'"';
-    }
-
-    private function currentUser(Request $request): ?User
-    {
-        /** @var User|null $user */
-        $user = $request->user();
-
-        if ($user instanceof User) {
-            return $user;
-        }
-
-        $token = $request->bearerToken();
-
-        if (! is_string($token) || $token === '') {
-            return null;
-        }
-
-        $accessToken = PersonalAccessToken::findToken($token);
-        $tokenable = $accessToken?->tokenable;
-
-        if ($tokenable instanceof User) {
-            return $tokenable;
-        }
-
-        // Do not widen an authenticated-looking request to the anonymous public scope.
-        return $request->headers->has('Authorization') ? new User : null;
     }
 }
