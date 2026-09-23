@@ -13,11 +13,12 @@ use Laravel\Sanctum\PersonalAccessToken;
  * Behavior (F-013 characterization, not to be changed without a decision
  * recorded in docs/DECISIONS.md):
  * - A user already authenticated by the guard is returned as-is.
- * - A resolvable bearer token returns its owner.
- * - A bearer token that fails to resolve returns an empty, unpersisted
- *   `User` instance instead of `null`, so an authenticated-looking but
- *   invalid request is never widened to the anonymous public scope
- *   (see ADR-23).
+ * - A resolvable, non-expired bearer token returns its owner.
+ * - A bearer token that fails to resolve, or that resolves but has an
+ *   `expires_at` in the past, returns an empty, unpersisted `User`
+ *   instance instead of `null`, so an authenticated-looking but invalid
+ *   or lapsed request is never widened to the anonymous public scope
+ *   (see ADR-23, F-015). A token without `expires_at` never lapses here.
  * - No bearer token at all (including a header that is not a `Bearer`
  *   scheme, or an empty `Bearer` value) returns `null`, the anonymous
  *   public scope.
@@ -40,6 +41,12 @@ class OptionalBearerUserResolver
         }
 
         $accessToken = PersonalAccessToken::findToken($token);
+
+        if ($accessToken?->expires_at?->isPast()) {
+            // Do not widen an authenticated-looking, lapsed request to the anonymous public scope.
+            return new User;
+        }
+
         $tokenable = $accessToken?->tokenable;
 
         if ($tokenable instanceof User) {
