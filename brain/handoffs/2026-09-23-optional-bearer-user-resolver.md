@@ -26,7 +26,7 @@ Commit `05de965` contains only the test file, on a tree whose controllers are st
 
 - Independent adversarial audit: APPROVED. The auditor compared the three bodies (main's two copies and the branch resolver) whitespace-normalized and found them identical at 486 characters, probed the four header classes inside the running container, and confirmed `DiscoveryAccess::communityIds()` maps `null` to every community and an unsaved `User` to `[]`.
 - Auditor limitation, stated by it: it could not re-execute the suite at `05de965`, because the `backend` service has no bind mount and the image could not be mutated. Equivalence rests on the character identity plus the unchanged test blob.
-- Gates on the branch: Pest 95 passed, Pint 133 files. The auditor measured 528 assertions against the executor's 530; the assertion count drifts because the Meilisearch `retry()` loop in the search test emits a variable number. The stable figure is the test count.
+- Gates on the branch before merging `main`: Pest 95 passed, Pint 133 files. After merging `0f07c74` (CSP) and rebuilding the backend image: Pest 97 passed (544 assertions), Pint 134 files. Frontend gates were not re-run here, because this branch touches backend only; they are `PENDING` on this branch and `VALIDATED` on `main` for the CSP work it merged. The auditor measured 528 assertions against the executor's 530; the assertion count drifts because the Meilisearch `retry()` loop in the search test emits a variable number. The stable figure is the test count.
 - No `skip`, `markTestSkipped`, `->todo(`, or `xit(` anywhere under `backend/tests`.
 
 ## Gate trap, still current
