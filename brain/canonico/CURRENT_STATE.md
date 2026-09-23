@@ -26,6 +26,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Browser/SSR runtime configuration separates internal SSR API calls from public browser API, Reverb, allowed hosts, and canonical public origin.
 - Markdown viewer sanitization and heading/code enhancement.
 - Server-side HTML sanitization of `content_html` in two layers: allowlist sanitizer applied at ingestion and again through a `Document` accessor on every read, so stored documents are served sanitized without rewriting the column.
+- Enforced Content-Security-Policy on every response. SSR HTML, prerendered documents included, gets a per-request `style-src` nonce with no `unsafe-inline` or `unsafe-eval` and `Cache-Control: no-store`; `connect-src` is built by the same function that serves `/runtime-config.js`. The API sends `default-src 'none'` from global middleware, error responses included.
 - SEO metadata, canonical URLs, Open Graph, JSON-LD, robots, sitemap, and portfolio screenshots, with SSR post-processing normalizing public origin metadata.
 - Development and production-like Docker Compose stacks.
 
@@ -48,7 +49,7 @@ Core patterns:
 
 - Controllers stay thin and delegate domain rules to services, policies, resources, jobs, and models.
 - API is versioned under `/api/v1`.
-- Public discovery endpoints are readable anonymously, but authenticated-looking requests with invalid tokens are not widened to public scope. The rule lives in a single place, `App\Services\Auth\OptionalBearerUserResolver`, injected into `CatalogController` and `SearchController` and locked by characterization tests (ADR-30). Two properties of it are deliberate and documented rather than fixed: a non-bearer `Authorization` header and an empty `Bearer` value fall into the public scope, not the empty scope, and an expired token is still accepted as its owner because these endpoints resolve the token outside the `auth:sanctum` guard (F-015).
+- Public discovery endpoints are readable anonymously, but authenticated-looking requests with invalid tokens are not widened to public scope. The rule lives in a single place, `App\Services\Auth\OptionalBearerUserResolver`, injected into `CatalogController` and `SearchController` and locked by characterization tests (ADR-31). Two properties of it are deliberate and documented rather than fixed: a non-bearer `Authorization` header and an empty `Bearer` value fall into the public scope, not the empty scope, and an expired token is still accepted as its owner because these endpoints resolve the token outside the `auth:sanctum` guard (F-015).
 - Mutating and operational endpoints require Sanctum auth and permission checks.
 - Ingestion is asynchronous-capable through jobs and Horizon, but can be exercised through services in tests.
 - Natural keys protect ingestion idempotency:
@@ -110,6 +111,7 @@ Current Brain bootstrap did not rerun the full product gate set because this cha
 - Token persistence is intentionally limited to memory; refresh loses session until a future session strategy is chosen.
 - Public discovery must remain clearly separated from private operational data.
 - Search correctness depends on keeping Scout payload fields and Meilisearch filter settings aligned.
+- Running the backend Pest gate inside the dev container wipes the development database. Feature tests use `RefreshDatabase`, `backend/phpunit.xml` keeps its database overrides commented out, and no `backend/.env.testing` exists, so the suite runs against `commandsphere`. Run E2E before Pest, and reseed with the runtime gates afterwards. CI is unaffected because it sets `DB_DATABASE=commandsphere_test`.
 
 ## Current Branch Context
 
@@ -211,3 +213,16 @@ Latest observability phase:
 - Additive `telemetry` channel (Monolog `JsonFormatter`, `storage/logs/telemetry.log`) emits `ingestion.enqueued`, `ingestion.started`, `ingestion.completed`, `ingestion.failed`, `webhook.github.accepted`, and `webhook.github.rejected` through `App\Support\Telemetry::event()`. The default channel is unchanged.
 - Not yet correlated: the GitHub call, Meilisearch indexing, and `CommandIndexUpdated`; `IngestionRunStatusChanged` carries the ID only inside `log` entries. `telemetry.log` has no rotation.
 - Gates: locally on base `25bbb3c`, Pest `VALIDATED` (64 passed) and Pint `VALIDATED` (128 files), with independent audit approved. Combined suite after merging `29a7881`, `VALIDATED` by pull request CI on `3e7b3a1`: 86 tests, 0 failed, 0 skipped. In CI every Feature test reports a warning (`60 warnings, 26 passed`); the same pattern exists on `main` since at least `25bbb3c`, does not occur locally, and its cause is not yet identified.
+
+Active CSP remediation branch: `fix/security-content-policy`.
+
+Latest browser hardening phase:
+
+- F-008 Content Security Policy (see ADR-30 and BRAIN-009).
+- SSR policy: `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-<per request>'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' <reverb ws origin> [<api origin when foreign>]; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`. The nonce is stamped on `app-root` as `ngCspNonce`.
+- `buildContentSecurityPolicy` and `/runtime-config.js` both read `resolveRuntimeBrowserConfig` in `frontend/src/server/content-security-policy.ts`, so the policy and the browser configuration cannot diverge.
+- Requests ending in `.html`, matched case-insensitively, skip `express.static` and go through the render (`frontend/src/server/prerendered-html.ts`). `/runtime-config.js` gets `default-src 'none'`. Real assets keep `public, max-age=31536000`.
+- Critical CSS inlining is off in `angular.json` and in `CommonEngine.render`. `UiIconComponent` and `UiSkeletonComponent` use static classes instead of `[style.*]`; the analytics bar uses an SVG `rect` width.
+- API policy: `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`, set by `SecurityHeaders` in the global middleware stack, so it also covers 401, 404, 405, and 422 responses.
+- Gates on base `ec2ddfa`, with independent audit approved: Pest `VALIDATED` (88 passed), Pint `VALIDATED` (132 files), TypeScript and lint `VALIDATED`, Jest `VALIDATED` (40 passed), SSR build `VALIDATED`, E2E 6 passed and 1 failed. The failure is pre-existing: `portfolio-happy-paths.spec.ts` asserts `Run #` while the pt-BR UI renders `Execução #`. `composer audit` reports no advisories and `npm audit --audit-level=critical` reports 0 critical.
+- Verified in a real browser: an injected inline `<script>` and an `<img onerror>` are blocked and reported, including on prerendered paths and upper-case variants such as `/INDEX.HTML`.

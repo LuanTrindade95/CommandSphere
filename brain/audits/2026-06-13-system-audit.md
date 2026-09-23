@@ -16,7 +16,9 @@ Remediation update: F-005 was addressed in branch `fix/analytics-bounds`. The an
 
 Remediation update: F-006 was addressed in branch `fix/github-client-fail-closed`. The GitHub client now fails closed on every non-success status and every malformed payload, through the `GitHubClientException` hierarchy whose `failureCode()` persists a stable code in `IngestionRun.log`. `IngestionService::run()` catches the whole hierarchy, so no GitHub failure escapes the run and leaves it stuck in `running`. Taxonomy and scope trade-offs are recorded in ADR-27.
 
-Remediation update: F-013 was addressed in branch `refactor/optional-bearer-user-resolver`. The duplicated `currentUser()` was extracted, unchanged, into `App\Services\Auth\OptionalBearerUserResolver`, with characterization tests committed before the extraction and passing unmodified after it (ADR-30). Characterizing the real behavior contradicted this finding's own description on two points, both left uncorrected and recorded: a non-bearer `Authorization` header and an empty `Bearer` value resolve to the public scope rather than the empty scope, and an expired token is still accepted as its owner, now tracked as F-015.
+Remediation update: F-008 was addressed in branch `fix/security-content-policy`. The SSR sends an enforced CSP on every HTML response, prerendered documents included, with a per-request `style-src` nonce, no `unsafe-inline` or `unsafe-eval`, and `connect-src` built from the same runtime configuration served at `/runtime-config.js`. The API sends `default-src 'none'` on every response, error responses included. Policy and trade-offs are recorded in ADR-30.
+
+Remediation update: F-013 was addressed in branch `refactor/optional-bearer-user-resolver`. The duplicated `currentUser()` was extracted, unchanged, into `App\Services\Auth\OptionalBearerUserResolver`, with characterization tests committed before the extraction and passing unmodified after it (ADR-31). Characterizing the real behavior contradicted this finding's own description on two points, both left uncorrected and recorded: a non-bearer `Authorization` header and an empty `Bearer` value resolve to the public scope rather than the empty scope, and an expired token is still accepted as its owner, now tracked as F-015.
 
 ## Executive Summary
 
@@ -225,6 +227,8 @@ Fix with ingestion observability/retry work.
 
 Severity: Medium
 
+Status: Mitigated in `fix/security-content-policy`.
+
 Evidence:
 
 - `backend/app/Http/Middleware/SecurityHeaders.php` sets basic hardening headers but no CSP.
@@ -365,7 +369,7 @@ Priority:
 
 Refactor opportunistically.
 
-Status: Closed by ADR-30. The description above is imprecise about the empty-scope branch; see F-015 and the remediation note at the top of this file.
+Status: Closed by ADR-31. The description above is imprecise about the empty-scope branch; see F-015 and the remediation note at the top of this file.
 
 ### F-014 - Audit Tooling Finds High Vulnerabilities In Frontend Toolchain
 

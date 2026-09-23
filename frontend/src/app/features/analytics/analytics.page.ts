@@ -51,9 +51,10 @@ import { UiEmptyStateComponent } from '@app/shared/ui/empty-state/ui-empty-state
                 <span class="font-semibold text-white">{{ command.name }}</span>
                 <span class="text-neutral-gray">{{ 'command.views' | transloco: { count: command.views } }}</span>
               </div>
-              <div class="h-2 rounded-full bg-white/8">
-                <div class="h-2 rounded-full bg-neon-cyan" [style.width.%]="barWidth(command)"></div>
-              </div>
+              <svg class="block h-2 w-full" viewBox="0 0 100 8" preserveAspectRatio="none" role="presentation" aria-hidden="true">
+                <rect width="100" height="8" rx="4" class="fill-white/8" />
+                <rect [attr.width]="barWidth(command)" height="8" rx="4" class="fill-neon-cyan" />
+              </svg>
             </article>
           }
         </div>

@@ -11,7 +11,7 @@ Remediation item C6: close F-013. `CatalogController::currentUser()` and `Search
 
 - `App\Services\Auth\OptionalBearerUserResolver`, a stateless function of `Request`, injected by constructor into both controllers. Both private methods removed. The body is character-identical to the original.
 - `backend/tests/Feature/OptionalBearerUserResolutionTest.php`: 8 header cases (no header, `Authorization: Basic`, empty `Bearer`, valid member token, garbage token, revoked token, valid token without membership, expired token) across the 8 public catalog and search endpoints, asserting status, item counts, and absence of private-community data.
-- Contract recorded in ADR-30 and BRAIN-009.
+- Contract recorded in ADR-31 and BRAIN-011.
 
 ## Order of work, and why it matters
 
