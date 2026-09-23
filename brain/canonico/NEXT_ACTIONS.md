@@ -1,6 +1,6 @@
 # Next Actions
 
-Updated: 2026-09-20
+Updated: 2026-09-23
 
 This roadmap is intentionally product-oriented. New work should strengthen portfolio signal, production realism, and architecture maturity rather than adding generic CRUD.
 
@@ -273,7 +273,7 @@ Risks:
 - Add Content Security Policy on Laravel and SSR Node responses.
 - Update `league/commonmark`, `guzzlehttp/guzzle`, `guzzlehttp/psr7`, and `phpseclib/phpseclib` to clear the 22 advisories reported by `composer audit`, including CVE-2026-71478 in commonmark 2.8.2. ADR-28 already neutralizes that link-filter bypass class independently, so this is dependency hygiene, not an open XSS hole.
 - Fix the two `runtime-config.spec.ts` Jest failures caused by Docker Compose environment variables leaking into the test `process.env`.
-- Extract optional bearer-token user resolution shared by public discovery controllers.
+- Decide F-015: public discovery endpoints accept an expired bearer token as its owner, because they resolve it through `PersonalAccessToken::findToken` outside the `auth:sanctum` guard and `sanctum.expiration` is null. Closing it changes endpoint responses, so it needs its own branch, its own decision record, and an update to the characterization test that currently locks the behavior.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.
 - Export command/document references.

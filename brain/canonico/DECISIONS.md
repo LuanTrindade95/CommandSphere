@@ -86,3 +86,14 @@ Consequences:
 - The correlation ID is added as a field on existing log entries, not as a new entry, because tests assert log entries by index.
 - Telemetry context carries identifiers, counts, statuses, and failure codes only. Request payloads, headers, signatures, tokens, and Markdown content never reach it.
 - Failure codes in events are read from the `code` key already persisted by BRAIN-007, never recomputed.
+
+## BRAIN-009 - A Scope Rule Has One Implementation, And A Refactor Proves It By Characterization First
+
+Decision: The rule that decides which scope a request gets exists once. When the same rule is found duplicated, the extraction is a pure move: characterization tests are written and committed against the unmodified code first, and the same tests, unchanged, must pass after the extraction. A behavior the refactor discovers to be wrong is reported and locked as-is, never corrected inside the same change. See ADR-30.
+
+Consequences:
+
+- The test commit comes before the refactor commit, so the tests cannot be retrofitted to the new behavior. An auditor verifies the order with `git log` and the test blob being byte-identical across both commits.
+- Equivalence is argued from the extracted body being character-identical to the original and the call sites being one-to-one substitutions, not from the tests alone.
+- A gap found while characterizing becomes a finding with a test that names it as pre-existing, plus a queue entry. Silently fixing it inside a refactor destroys the evidence that responses did not change.
+- What the audit item says a piece of code does is a claim, not the contract. The contract is what the code does, read from the source before the tests are written.
