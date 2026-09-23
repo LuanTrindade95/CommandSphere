@@ -398,6 +398,8 @@ Monitor now; upgrade when compatible.
 
 Severity: Medium
 
+Status: Closed by ADR-32 in branch `fix/expired-bearer-fail-closed`. An expired token now returns the empty scope. `sanctum.expiration` stays null by decision, so a token without an explicit `expires_at` still never lapses; that is a product question, not this fix.
+
 Found on 2026-09-23 while characterizing F-013. Pre-existing, not introduced by that refactor.
 
 Evidence:
