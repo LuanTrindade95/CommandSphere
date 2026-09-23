@@ -104,10 +104,14 @@ Current Brain bootstrap did not rerun the full product gate set because this cha
 
 ## Production Stack Facts
 
-Confirmed on 2026-09-23 by running `docker-compose.prod.yml` with public values that differ from the defaults, twice and independently. The stack was built from commit `29a7881`, before the Content-Security-Policy work landed on `main`, so anything below about response headers describes that commit. Details in `brain/handoffs/2026-09-23-production-hydrated-smoke.md`.
+Confirmed by running `docker-compose.prod.yml` with public values that differ from the defaults, four times in total and each time under an independent adversarial repeat. Two passes ran on `29a7881`, before Content-Security-Policy existed, and two on `c4eee46`, with CSP enforced. Every pass used a different public IP and port set and published ports on that IP only, so the default origin answered connection refused and a leak would fail loudly. Details in `brain/handoffs/2026-09-23-production-hydrated-smoke.md` and `brain/handoffs/2026-09-23-production-smoke-csp-recheck.md`.
 
+- The hydrated browser calls only the configured public origin, canonical and metadata ignore a forged `Host` or `X-Forwarded-Host`, `/runtime-config.js` serves the configured values, the browser websocket reaches the configured public Reverb host, and production `dev-login` answers `403` before request validation. Proven on both commits.
+- CSP is enforced, not merely announced. `connect-src` carries the configured API and Reverb origins and no defaults, the `style-src` nonce changes per response under `Cache-Control: no-store`, and browser probes on a served page confirm `disposition: enforce` against an inline style without nonce, an inline script, a foreign script, and a foreign `fetch`, while a style carrying the header nonce applies.
+- Meilisearch index settings are applied by no code path. `filterableAttributes` stays empty until `php artisan scout:sync-index-settings` runs, including when documents arrive through the normal ingestion path with Scout observers and Horizon active. A fresh index therefore answers `500` with `Attribute community is not filterable` on faceted search until that command runs. It is the documented step in `README.md`, not a regression, and it must run before or after import on every new environment.
 - Seeding does not work in the production image. `fakerphp/faker` sits in `require-dev` in `backend/composer.json` while `docker/backend.prod.Dockerfile` installs with `composer install --no-dev`, so any factory calling `fake()` raises `Call to undefined function Database\Factories\fake()`. Migrations and Scout index sync work normally.
-- The API answered `Access-Control-Allow-Origin: *`, the Laravel default with `config/cors.php` unpublished, so no origin is restricted. Confirm it on current `main` before acting on it.
+- The API answers `Access-Control-Allow-Origin: *`, the Laravel default with `config/cors.php` unpublished, on every response including `403`, `404`, and `500`, and including a forged `Origin`. Confirmed on `c4eee46`.
+- API responses carry duplicated security headers, sent by both nginx and the `SecurityHeaders` middleware.
 
 ## Known Constraints
 

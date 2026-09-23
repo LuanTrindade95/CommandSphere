@@ -30,7 +30,7 @@ Risks:
 
 Problem: The browser API base URL is hardcoded to `http://localhost:8000/api/v1`, while production Compose only configures the SSR server-side API URL. Reverb runtime config also relies on local defaults/localStorage.
 
-Status: Implemented in branch `fix/runtime-production-config` and production-proven. The Docker production hydrated-browser smoke ran on 2026-09-23 against `docker-compose.prod.yml` with public values that differ from the defaults, under adversarial audit, and closed the last validation item. See `brain/handoffs/2026-09-23-production-hydrated-smoke.md`.
+Status: Implemented in branch `fix/runtime-production-config` and production-proven, on `29a7881` and again on `c4eee46` with Content-Security-Policy enforced. Both rounds ran against `docker-compose.prod.yml` with public values that differ from the defaults and were repeated independently under adversarial audit. See `brain/handoffs/2026-09-23-production-hydrated-smoke.md` and `brain/handoffs/2026-09-23-production-smoke-csp-recheck.md`.
 
 Recommended direction:
 
@@ -292,7 +292,9 @@ Risks:
 
 ## Backlog
 
-- Review the API `Access-Control-Allow-Origin: *`. The 2026-09-23 production smoke saw it on `/api/v1/auth/dev-login`, which means `config/cors.php` is unpublished and every origin is allowed. That smoke predates the CSP work merged in ADR-30, so confirm the header on current `main` before acting.
+- Review the API `Access-Control-Allow-Origin: *`. `config/cors.php` is unpublished, so the framework default allows every origin. Confirmed on `c4eee46` across `200`, `403`, `404`, and `500`, and with a forged `Origin`.
+- Decide whether Meilisearch index settings should be applied by code. Today `filterableAttributes` is set only by `php artisan scout:sync-index-settings`; no observer, job, or ingestion path applies it, so a fresh index answers `500` on faceted search until an operator runs the command. Either make ingestion ensure the settings or make the failure explicit instead of a generic `500`.
+- Remove the duplicated security headers on API responses, sent by both nginx and the `SecurityHeaders` middleware.
 - Isolate the backend test suite from the development database. Feature tests use `RefreshDatabase`, `backend/phpunit.xml` keeps its `DB_CONNECTION`/`DB_DATABASE` overrides commented out, and no `backend/.env.testing` exists, so the documented Pest gate wipes `commandsphere` on every run. Point the suite at a dedicated test database, as CI already does with `commandsphere_test`, and document how to create it locally.
 - Fix `portfolio-happy-paths.spec.ts` › `admin sincroniza e vê ingestion run`, the only failing E2E test: it asserts `/Run #/` while the pt-BR UI renders `Execução #` from the `runId` key in `frontend/public/i18n/pt-BR.json`.
 - Make the Pest assertion total deterministic. `it indexes commands in meilisearch through scout import` makes between 8 and 10 assertions depending on the run, so the suite total varies on unchanged code; the test count is stable.
