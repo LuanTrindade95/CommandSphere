@@ -99,3 +99,14 @@ Consequences:
 - Components do not use `[style.*]` bindings or `style=""` attributes. Enumerable values become classes; continuous values become SVG geometry attributes. `style-src-attr 'unsafe-inline'` requires a recorded decision.
 - HTML carrying a nonce is never cacheable. A cache or proxy placed in front of the SSR must not cache HTML or rewrite the header.
 - The policy is proven in a real browser, not only by header assertions: an injected inline script and an inline event handler must both be blocked and reported as violations.
+
+## BRAIN-010 - `main` Moves While A Task Runs, So Shared Numbers And Verified States Are Claimed Late
+
+Decision: Several sessions work this repository at once and merge into `main` during a task. Anything shared across branches is therefore read from `origin/main` at the moment it is written, and the state that ships is the state that was verified.
+
+Consequences:
+
+- An ADR number is allocated by reading `docs/DECISIONS.md` on `origin/main` immediately before writing, never reserved at the start of a task. The same holds for `BRAIN-NNN` and for any other sequence.
+- A branch is rebased onto `origin/main` before publishing, and the gates run again on the rebased base. Approval granted on an earlier base does not carry over on its own: confirm that the change's own diff is unchanged and that the new base did not break it.
+- Before opening or merging a pull request, `git fetch` again. A rebase that was current an hour ago may not be.
+- When an edit to `brain/` or `docs/` is the closing step, re-read the file on the current base. Another session may have added a section where one is about to be written.
