@@ -30,7 +30,7 @@ Risks:
 
 Problem: The browser API base URL is hardcoded to `http://localhost:8000/api/v1`, while production Compose only configures the SSR server-side API URL. Reverb runtime config also relies on local defaults/localStorage.
 
-Status: Implemented in branch `fix/runtime-production-config` as the first build-loop remediation phase. Keep the Docker production hydrated-browser smoke as a remaining validation item before treating this as fully production-proven.
+Status: Implemented in branch `fix/runtime-production-config` and production-proven. The Docker production hydrated-browser smoke ran on 2026-09-23 against `docker-compose.prod.yml` with public values that differ from the defaults, under adversarial audit, and closed the last validation item. See `brain/handoffs/2026-09-23-production-hydrated-smoke.md`.
 
 Recommended direction:
 
@@ -42,8 +42,10 @@ Acceptance criteria:
 
 - Production-mode browser calls do not point to localhost. `VALIDATED` through SSR artifact smoke with public runtime config.
 - SSR uses the configured production origin for canonical, Open Graph, and JSON-LD metadata. `VALIDATED` through SSR artifact smoke.
-- Reverb uses documented production runtime config. `VALIDATED` at configuration level; websocket integration remains part of Docker/E2E validation.
-- Docker production smoke validates hydrated browser API calls.
+- Reverb uses documented production runtime config. `VALIDATED` in the production stack: the browser opens `ws://<public host>:<public port>/app/<key>` from the served runtime config, and Reverb answers `pusher:connection_established`. The public variable wins over the fixed `COMMANDSPHERE_REVERB_HOST: localhost` in the `frontend` service.
+- Docker production smoke validates hydrated browser API calls. `VALIDATED`: 53 post-hydration requests, every API call on the configured origin, zero requests to the default origin, which was bound away and answered connection refused.
+- SSR ignores a forged `Host` header for canonical and metadata. `VALIDATED`: `publicUrlFor()` in `frontend/src/server.ts` builds from `COMMANDSPHERE_PUBLIC_ORIGIN` only.
+- Production `dev-login` stays disabled. `VALIDATED`: `403 auth.dev_login_disabled`, refused before request validation.
 
 Risks:
 
@@ -268,8 +270,29 @@ Risks:
 
 - An Angular major upgrade touches SSR, build and tests at once; it needs its own branch, gates and audit.
 
+## Priority 13 - Seeding Is Broken In The Production Image
+
+Problem: `fakerphp/faker` is declared only in `require-dev` in `backend/composer.json`, and `docker/backend.prod.Dockerfile` installs with `composer install --no-dev`. Every factory that calls `fake()`, starting at `backend/database/factories/UserFactory.php`, is therefore undefined in the production image, so `php artisan migrate --seed` and `php artisan db:seed` abort with `Call to undefined function Database\Factories\fake()`.
+
+Reproduced twice and independently on 2026-09-23, in the smoke and in the audit.
+
+Recommended direction:
+
+- Decide whether the production image is supposed to seed at all. If it is, move `fakerphp/faker` to `require`, or split demo factories from the production-facing seeder so that the production path has no Faker dependency.
+- Keep the split explicit, so a demo or portfolio dataset never becomes a production seeding requirement by accident.
+
+Acceptance criteria:
+
+- Seeding either succeeds in the `--no-dev` image or is explicitly documented as unsupported there, with the supported path written down.
+- The production Docker smoke can create a dataset without direct SQL inserts.
+
+Risks:
+
+- Moving Faker to `require` ships a development library in the production image. Splitting the seeders is more work but keeps the image lean.
+
 ## Backlog
 
+- Review the API `Access-Control-Allow-Origin: *`. The 2026-09-23 production smoke saw it on `/api/v1/auth/dev-login`, which means `config/cors.php` is unpublished and every origin is allowed. That smoke predates the CSP work merged in ADR-30, so confirm the header on current `main` before acting.
 - Isolate the backend test suite from the development database. Feature tests use `RefreshDatabase`, `backend/phpunit.xml` keeps its `DB_CONNECTION`/`DB_DATABASE` overrides commented out, and no `backend/.env.testing` exists, so the documented Pest gate wipes `commandsphere` on every run. Point the suite at a dedicated test database, as CI already does with `commandsphere_test`, and document how to create it locally.
 - Fix `portfolio-happy-paths.spec.ts` › `admin sincroniza e vê ingestion run`, the only failing E2E test: it asserts `/Run #/` while the pt-BR UI renders `Execução #` from the `runId` key in `frontend/public/i18n/pt-BR.json`.
 - Make the Pest assertion total deterministic. `it indexes commands in meilisearch through scout import` makes between 8 and 10 assertions depending on the run, so the suite total varies on unchanged code; the test count is stable.
