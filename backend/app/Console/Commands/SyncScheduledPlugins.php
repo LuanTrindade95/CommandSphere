@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\RunPluginVersionIngestion;
 use App\Models\Plugin;
 use App\Services\Ingestion\IngestionService;
+use App\Support\CorrelationId;
 use Illuminate\Console\Command;
 
 class SyncScheduledPlugins extends Command
@@ -27,7 +28,10 @@ class SyncScheduledPlugins extends Command
                     return;
                 }
 
-                $run = $service->start($pluginVersion, 'scheduled');
+                // Each scheduled run is its own logical operation, not part
+                // of an inbound request, so it gets its own fresh
+                // correlation ID rather than sharing one across the batch.
+                $run = $service->start($pluginVersion, 'scheduled', correlationId: CorrelationId::generate());
 
                 if ($run->wasRecentlyCreated) {
                     RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);

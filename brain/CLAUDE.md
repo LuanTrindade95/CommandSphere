@@ -49,6 +49,8 @@ docker compose exec -T backend ./vendor/bin/pint --test
 docker compose exec -T backend composer audit
 ```
 
+Pest wipes the development database: Feature tests use `RefreshDatabase` and the suite runs against `commandsphere`, because `backend/phpunit.xml` keeps its database overrides commented out and there is no `backend/.env.testing`. Run any gate that needs data, E2E above all, **before** Pest, and reseed with the runtime gates afterwards. CI is unaffected; it sets `DB_DATABASE=commandsphere_test`.
+
 Frontend gates:
 
 ```bash

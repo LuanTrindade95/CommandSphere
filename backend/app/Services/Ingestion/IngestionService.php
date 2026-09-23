@@ -15,6 +15,9 @@ use App\Models\IngestionRun;
 use App\Models\PluginVersion;
 use App\Services\Discovery\DiscoveryCache;
 use App\Services\Markdown\MarkdownParser;
+use App\Support\CorrelationId;
+use App\Support\Telemetry;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -27,9 +30,20 @@ class IngestionService
         private readonly DiscoveryCache $cache,
     ) {}
 
-    public function start(PluginVersion $pluginVersion, string $source = 'manual', bool $force = false): IngestionRun
+    /**
+     * Start (or reuse) an ingestion run.
+     *
+     * The correlation ID identifies the caller's request, not the run: if
+     * an active run is reused, the run keeps the correlation ID of whoever
+     * created it, and this call's own ID is only recorded on the
+     * `ingestion.enqueued` telemetry event, referencing the reused run.
+     * Run history is never rewritten.
+     */
+    public function start(PluginVersion $pluginVersion, string $source = 'manual', bool $force = false, ?string $correlationId = null): IngestionRun
     {
-        $run = DB::transaction(function () use ($pluginVersion, $source, $force): IngestionRun {
+        $requestCorrelationId = $correlationId ?? CorrelationId::generate();
+
+        $run = DB::transaction(function () use ($pluginVersion, $source, $force, $requestCorrelationId): IngestionRun {
             if (! $force) {
                 $existingRun = IngestionRun::query()
                     ->where('plugin_version_id', $pluginVersion->id)
@@ -46,6 +60,7 @@ class IngestionService
             return IngestionRun::query()->create([
                 'plugin_version_id' => $pluginVersion->id,
                 'source' => $source,
+                'correlation_id' => $requestCorrelationId,
                 'status' => 'queued',
                 'stats' => [
                     'docs_parsed' => 0,
@@ -60,6 +75,17 @@ class IngestionService
             IngestionRunStatusChanged::dispatch($run);
         }
 
+        Telemetry::event('ingestion.enqueued', [
+            'correlation_id' => $requestCorrelationId,
+            'ingestion_run_id' => $run->id,
+            'plugin_version_id' => $pluginVersion->id,
+            'plugin_id' => $pluginVersion->plugin_id,
+            'community_id' => $pluginVersion->plugin?->community_id,
+            'source' => $source,
+            'reused' => ! $run->wasRecentlyCreated,
+            'user_id' => Auth::id(),
+        ]);
+
         return $run;
     }
 
@@ -67,12 +93,22 @@ class IngestionService
     {
         $pluginVersion->loadMissing('plugin');
         $run ??= $this->start($pluginVersion);
+        $correlationId = $run->correlation_id ?? CorrelationId::generate();
         $run->update([
             'status' => 'running',
             'started_at' => now(),
             'finished_at' => null,
         ]);
         IngestionRunStatusChanged::dispatch($run->refresh());
+
+        Telemetry::event('ingestion.started', [
+            'correlation_id' => $correlationId,
+            'ingestion_run_id' => $run->id,
+            'plugin_version_id' => $pluginVersion->id,
+            'plugin_id' => $pluginVersion->plugin_id,
+            'community_id' => $pluginVersion->plugin?->community_id,
+            'source' => $run->source,
+        ]);
 
         $stats = [
             'docs_parsed' => 0,
@@ -88,7 +124,8 @@ class IngestionService
                 'level' => 'error',
                 'code' => $exception->failureCode(),
                 'message' => $exception->getMessage(),
-            ]]);
+                'correlation_id' => $correlationId,
+            ]], $correlationId);
         }
 
         foreach ($files as $file) {
@@ -98,6 +135,7 @@ class IngestionService
                     'code' => 'document_not_modified',
                     'path' => $file->path,
                     'message' => "Skipped unchanged markdown file [{$file->path}].",
+                    'correlation_id' => $correlationId,
                 ];
 
                 continue;
@@ -117,6 +155,7 @@ class IngestionService
                         'code' => 'markdown_warning',
                         'path' => $parsedDocument->path,
                         'message' => $warning,
+                        'correlation_id' => $correlationId,
                     ];
                 }
             } catch (Throwable $exception) {
@@ -126,6 +165,7 @@ class IngestionService
                     'code' => 'document_parse_failed',
                     'path' => $file->path,
                     'message' => $exception->getMessage(),
+                    'correlation_id' => $correlationId,
                 ];
             }
         }
@@ -137,6 +177,18 @@ class IngestionService
             'stats' => $stats,
             'log' => $log,
             'finished_at' => now(),
+        ]);
+
+        Telemetry::event('ingestion.completed', [
+            'correlation_id' => $correlationId,
+            'ingestion_run_id' => $run->id,
+            'plugin_version_id' => $pluginVersion->id,
+            'plugin_id' => $pluginVersion->plugin_id,
+            'community_id' => $pluginVersion->plugin?->community_id,
+            'status' => $status,
+            'docs_parsed' => $stats['docs_parsed'],
+            'commands_extracted' => $stats['commands_extracted'],
+            'warnings' => $stats['warnings'],
         ]);
 
         if ($stats['docs_parsed'] > 0) {
@@ -226,7 +278,7 @@ class IngestionService
      * @param  array<string, int>  $stats
      * @param  list<array<string, mixed>>  $log
      */
-    private function fail(IngestionRun $run, array $stats, array $log): IngestionRun
+    private function fail(IngestionRun $run, array $stats, array $log, ?string $correlationId = null): IngestionRun
     {
         $run->update([
             'status' => 'failed',
@@ -237,6 +289,21 @@ class IngestionService
 
         $run = $run->refresh();
         IngestionRunStatusChanged::dispatch($run);
+
+        // The failure code is consumed from the `code` key already
+        // persisted in the log entry, per ADR-27/BRAIN-007: never
+        // recomputed, never renamed.
+        $run->loadMissing('pluginVersion.plugin');
+        $pluginVersion = $run->pluginVersion;
+
+        Telemetry::event('ingestion.failed', [
+            'correlation_id' => $correlationId ?? $run->correlation_id,
+            'ingestion_run_id' => $run->id,
+            'plugin_version_id' => $run->plugin_version_id,
+            'plugin_id' => $pluginVersion?->plugin_id,
+            'community_id' => $pluginVersion?->plugin?->community_id,
+            'code' => $log[0]['code'] ?? null,
+        ]);
 
         return $run;
     }

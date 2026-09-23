@@ -2,6 +2,7 @@
 
 Date: 2026-09-23
 Branch: `claude/estruturar-agentes-20566a` (validation only, no product change)
+Stack built from: `29a7881`, before the Content-Security-Policy work (ADR-30) landed on `main`
 
 ## Scope
 
@@ -28,8 +29,9 @@ Secrets were generated per run into an env file outside the repository. No versi
 ## Remaining Work
 
 - Seeding is broken in the production image: `fakerphp/faker` is a dev dependency and the image installs `--no-dev`. Tracked as Priority 13. The adversarial pass worked around it with direct SQL inserts into the throwaway volume, which is how the plugin and command pages could be tested at all.
-- No Content Security Policy exists anywhere in the stack. Tracked in the backlog; the clean console in this smoke says nothing about policy.
-- The API serves `Access-Control-Allow-Origin: *`. Tracked in the backlog.
+- The stack carried no `Content-Security-Policy` header at `29a7881`, so the clean console proved nothing about policy. ADR-30 has since added CSP on `main`; this smoke says nothing about that implementation and does not validate it.
+- The API served `Access-Control-Allow-Origin: *`. Tracked in the backlog, to be confirmed on current `main`.
+- Every result here is evidence about `29a7881`. `main` has since changed `frontend/src/server.ts` and the backend middleware stack, so re-running this smoke is what would extend the proof to current `main`.
 
 ## Gates
 

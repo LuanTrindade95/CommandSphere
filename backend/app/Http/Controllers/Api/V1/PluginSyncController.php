@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RunPluginVersionIngestion;
 use App\Models\Plugin;
 use App\Services\Ingestion\IngestionService;
+use App\Support\CorrelationId;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PluginSyncController extends Controller
 {
-    public function __invoke(Plugin $plugin, IngestionService $service): JsonResponse
+    public function __invoke(Request $request, Plugin $plugin, IngestionService $service): JsonResponse
     {
         $plugin->loadMissing('versions');
 
@@ -20,7 +22,7 @@ class PluginSyncController extends Controller
             ->first()
             ?? $plugin->versions()->latest('id')->firstOrFail();
 
-        $run = $service->start($pluginVersion, 'manual');
+        $run = $service->start($pluginVersion, 'manual', correlationId: CorrelationId::fromRequest($request));
 
         if ($run->wasRecentlyCreated) {
             RunPluginVersionIngestion::dispatch($pluginVersion->id, $run->id);
@@ -31,6 +33,7 @@ class PluginSyncController extends Controller
                 'id' => $run->id,
                 'plugin_version_id' => $run->plugin_version_id,
                 'source' => $run->source,
+                'correlation_id' => $run->correlation_id,
                 'status' => $run->status,
                 'stats' => $run->stats,
                 'log' => $run->log,

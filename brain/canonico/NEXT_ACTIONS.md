@@ -122,7 +122,7 @@ Risks:
 
 Problem: Analytics period is unbounded and system telemetry is mostly implicit in `IngestionRun.log`.
 
-Status: Analytics period bounds implemented in branch `fix/analytics-bounds`. Broader structured telemetry/correlation IDs remain a future observability phase.
+Status: Analytics period bounds implemented in branch `fix/analytics-bounds`. Correlation IDs and structured ingestion/webhook events implemented in branch `feature/ingestion-telemetry-correlation` (ADR-29). Remaining: propagate the ID to the GitHub call, Meilisearch indexing, and `CommandIndexUpdated`; add the other taxonomy events and duration/latency metrics; define retention for `storage/logs/telemetry.log`.
 
 Recommended direction:
 
@@ -133,7 +133,7 @@ Recommended direction:
 Acceptance criteria:
 
 - Analytics rejects invalid periods and caps expensive windows. `VALIDATED` by `DiscoveryApiTest`.
-- Logs/events include correlation IDs and relevant domain IDs.
+- Logs/events include correlation IDs and relevant domain IDs. `VALIDATED` for request -> run -> job -> run log -> telemetry events by `IngestionTelemetryTest`, `CorrelationIdTest`, and an independent audit.
 - Ingestion run detail can be debugged without server-log archaeology.
 
 Risks:
@@ -292,11 +292,14 @@ Risks:
 
 ## Backlog
 
-- Add Content Security Policy on Laravel and SSR Node responses. The 2026-09-23 production smoke confirmed zero `Content-Security-Policy` headers on SSR, `/runtime-config.js`, and API responses, so a clean console proves nothing about policy.
-- Review the default `Access-Control-Allow-Origin: *` on the API. The production smoke saw it on `/api/v1/auth/dev-login`, which means `config/cors.php` is unpublished and every origin is allowed.
-- Update `league/commonmark`, `guzzlehttp/guzzle`, `guzzlehttp/psr7`, and `phpseclib/phpseclib` to clear the 22 advisories reported by `composer audit`, including CVE-2026-71478 in commonmark 2.8.2. ADR-28 already neutralizes that link-filter bypass class independently, so this is dependency hygiene, not an open XSS hole.
+- Review the API `Access-Control-Allow-Origin: *`. The 2026-09-23 production smoke saw it on `/api/v1/auth/dev-login`, which means `config/cors.php` is unpublished and every origin is allowed. That smoke predates the CSP work merged in ADR-30, so confirm the header on current `main` before acting.
+- Isolate the backend test suite from the development database. Feature tests use `RefreshDatabase`, `backend/phpunit.xml` keeps its `DB_CONNECTION`/`DB_DATABASE` overrides commented out, and no `backend/.env.testing` exists, so the documented Pest gate wipes `commandsphere` on every run. Point the suite at a dedicated test database, as CI already does with `commandsphere_test`, and document how to create it locally.
+- Fix `portfolio-happy-paths.spec.ts` › `admin sincroniza e vê ingestion run`, the only failing E2E test: it asserts `/Run #/` while the pt-BR UI renders `Execução #` from the `runId` key in `frontend/public/i18n/pt-BR.json`.
+- Make the Pest assertion total deterministic. `it indexes commands in meilisearch through scout import` makes between 8 and 10 assertions depending on the run, so the suite total varies on unchanged code; the test count is stable.
+- Decide whether `X-Request-Id` must appear on API responses for requests that match no route. `AssignCorrelationId` lives in the `api` middleware group, so 404 and 405 responses for unrouted paths carry no correlation ID, while the global `SecurityHeaders` still applies.
+- On Windows worktrees, Jest loads `frontend/e2e/*.spec.ts` despite `testPathIgnorePatterns: ['<rootDir>/e2e/']` and reports 2 failed suites with 0 failed tests.
 - Fix the two `runtime-config.spec.ts` Jest failures caused by Docker Compose environment variables leaking into the test `process.env`.
-- Extract optional bearer-token user resolution shared by public discovery controllers.
+- Decide F-015: public discovery endpoints accept an expired bearer token as its owner, because they resolve it through `PersonalAccessToken::findToken` outside the `auth:sanctum` guard and `sanctum.expiration` is null. Closing it changes endpoint responses, so it needs its own branch, its own decision record, and an update to the characterization test that currently locks the behavior.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.
 - Export command/document references.

@@ -36,6 +36,6 @@ Use this index to decide which context files to read for a new task.
 - Ingestion/parser change: read `CURRENT_STATE`, `01_PRODUCT_AND_DOMAIN`, `02_IMPLEMENTATION_MAP`, ADR-09, ADR-10, ADR-11.
 - Search/discovery change: read `CURRENT_STATE`, `02_IMPLEMENTATION_MAP`, ADR-12, ADR-13, ADR-23.
 - Realtime/admin operations change: read `CURRENT_STATE`, `02_IMPLEMENTATION_MAP`, `03_QUALITY_AND_OPERATIONS`, ADR-20, ADR-21, ADR-22.
-- Frontend UX change: read `01_PRODUCT_AND_DOMAIN`, `02_IMPLEMENTATION_MAP`, ADR-02, ADR-03, ADR-17, ADR-18, ADR-19.
-- Deployment/hardening change: read `03_QUALITY_AND_OPERATIONS`, ADR-24, ADR-25.
+- Frontend UX change: read `01_PRODUCT_AND_DOMAIN`, `02_IMPLEMENTATION_MAP`, ADR-02, ADR-03, ADR-17, ADR-18, ADR-19, ADR-30 (components cannot use inline styles under the CSP).
+- Deployment/hardening change: read `03_QUALITY_AND_OPERATIONS`, ADR-24, ADR-25, ADR-30.
 - Security/telemetry audit follow-up: read `brain/audits/2026-06-13-system-audit.md` first, then the area-specific context above.

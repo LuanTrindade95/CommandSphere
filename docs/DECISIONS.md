@@ -340,3 +340,59 @@ Sanitizar no backend em duas camadas, com um allowlist próprio de tags e atribu
 
 ### Consequências
 Documentos antigos ficam cobertos sem migração nem reprocessamento: a coluna armazenada permanece como está e a sanitização acontece na saída, o que satisfaz a lei DATA sem escrita em dado existente. A proteção não depende do filtro interno do `league/commonmark`, o que neutraliza a classe de bypass por bytes de controle do `CVE-2026-71478` (versão instalada 2.8.2) independentemente da atualização daquele pacote — complementar ao ADR-26, que trata a política de advisories por override de dependência. O custo é sanitizar a cada leitura; a operação é idempotente e o resultado de discovery já é cacheado por `DiscoveryCache`. Entradas cacheadas antes do deploy continuam cruas até expirar (300s), então o deploy desta mudança exige invalidar o cache de discovery.
+
+## ADR-29 — Correlation ID e telemetria estruturada no fluxo de ingestão
+
+### Contexto
+Não havia como seguir um incidente de ponta a ponta — request do webhook, run de ingestão, job na fila, falha do GitHub. Não existia nenhuma chamada a `Log::` em `backend/app/`, o canal padrão era `stack` → `single` em texto livre, e as entradas de `IngestionRun.log` não carregavam identificador de correlação (F-011).
+
+### Decisão
+- O middleware `AssignCorrelationId`, em prepend na stack `api`, aceita o `X-Request-Id` recebido apenas se casar `^[A-Za-z0-9._:-]{1,128}$` com o modificador `D`; caso contrário gera um UUID. O ID é devolvido no cabeçalho da resposta. Sem o `D`, o `$` do PCRE casa antes de um newline final e o valor cru seria ecoado no cabeçalho e persistido — o modificador é obrigatório e está coberto por teste de regressão para `\n`, `\r` e `\r\n` finais.
+- A coluna aditiva `ingestion_runs.correlation_id`, nullable e indexada, é gravada na criação do run. O job não carrega o ID: recarrega o run pelo `ingestionRunId` e lê a coluna.
+- Um run reaproveitado por `IngestionService::start()` mantém o ID de quem o criou. A chamada que o reaproveitou registra o próprio ID apenas no evento `ingestion.enqueued`, com `reused: true`. Histórico de run não é reescrito.
+- Cada entrada de `IngestionRun.log` ganha o campo `correlation_id`. Nenhuma entrada nova é acrescentada, o que preserva asserções existentes por índice.
+- Um canal `telemetry` aditivo (Monolog com `JsonFormatter`, arquivo `storage/logs/telemetry.log`) recebe os eventos por `App\Support\Telemetry::event()`: `ingestion.enqueued`, `ingestion.started`, `ingestion.completed`, `ingestion.failed`, `webhook.github.accepted` e `webhook.github.rejected`. O canal `default` não muda. `ingestion.failed` lê o código da chave `code` já persistida, sem recomputar nem criar vocabulário paralelo (ADR-27, BRAIN-007).
+- O sync agendado gera um ID por run, não compartilhado no lote.
+
+### Consequências
+Um incidente pode ser seguido por um único ID da requisição ao run, ao job, a cada entrada do log do run e aos eventos estruturados, sem dependência nova nem infraestrutura externa. Runs anteriores à migration ficam com `correlation_id` nulo e continuam legíveis na API e no admin. O contexto de telemetria é montado apenas com identificadores, contagens, status e códigos: token, cabeçalho `Authorization`, assinatura do webhook, segredo e conteúdo Markdown não entram no log. Limites atuais: a chamada ao GitHub, a indexação no Meilisearch e o evento `CommandIndexUpdated` não carregam o ID, e o broadcast `IngestionRunStatusChanged` o leva apenas indiretamente, dentro das entradas de `log`. Os demais eventos da taxonomia da auditoria (`plugin.created`, `search.executed`, `realtime.broadcast.failed` e outros) e as métricas de duração e latência ficam fora. O `telemetry.log` usa `StreamHandler` sem rotação e cresce sem limite até que uma política de retenção seja definida.
+
+## ADR-30 — Content Security Policy estrita com nonce por requisição
+
+### Contexto
+Nem a API Laravel nem o SSR Node enviavam `Content-Security-Policy` (F-008). O app renderiza HTML derivado de Markdown de terceiros; a sanitização no Angular (ADR-18) e no servidor (ADR-28) é a primeira barreira, e faltava a segunda, aplicada pelo browser. Três pontos impediam uma política estrita sem `unsafe-inline`: o `CommonEngine` do Angular SSR injetava CSS crítico inline, com handler `onload`, nas rotas renderizadas dinamicamente; componentes usavam bindings `[style.*]`, que o SSR serializa como atributo `style=""`; e o `express.static` respondia os HTML prerrenderizados antes do render, sem cabeçalho nenhum e com cache de um ano.
+
+### Decisão
+- O SSR aplica a CSP por requisição: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'nonce-<por requisição>'`, `img-src 'self' data: https:`, `font-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` e `frame-ancestors 'none'`. O nonce chega ao Angular pelo atributo `ngCspNonce` do `app-root`.
+- `script-src` dispensa nonce porque nenhum script inline executa: o transfer state e o JSON-LD são blocos `application/json` e `application/ld+json`.
+- `connect-src` é montado pela mesma função que gera o `/runtime-config.js` (`resolveRuntimeBrowserConfig`, a partir de `COMMANDSPHERE_API_PUBLIC_URL` e `COMMANDSPHERE_REVERB_PUBLIC_*`), então a política e a configuração que o browser recebe não podem divergir. Nenhum host é fixo. A origem da API só entra quando difere da origem do próprio SSR, e o esquema do Reverb define `ws:` ou `wss:`.
+- O HTML sai com `Cache-Control: no-store`, porque um nonce cacheado deixa de ser nonce.
+- Requisições `*.html`, sem diferenciar caixa, não passam pelo `express.static`: caem no render e recebem a mesma política. `/runtime-config.js` recebe `default-src 'none'`.
+- A inlining de CSS crítico fica desligada no build (`angular.json`) e no `CommonEngine.render`.
+- Valores de estilo enumeráveis viram classes Tailwind estáticas. O único valor contínuo, a barra de analytics, virou atributo de geometria SVG, que `style-src` não rege.
+- A API, que serve apenas JSON, envia `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'` em toda resposta, inclusive nas de erro. O `SecurityHeaders` fica no stack global de middleware, de modo que nenhum grupo de rota o contorna.
+- A política é aplicada, não report-only. Os cabeçalhos anteriores (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) permanecem.
+
+### Consequências
+A política não tem `unsafe-inline` nem `unsafe-eval`, e não há curinga em `script-src` nem em `connect-src`. `img-src https:` é a única abertura, deliberada, para não quebrar as imagens da documentação ingerida; o custo é expor o acesso a hosts de imagem arbitrários, atenuado pelo `Referrer-Policy`. Um proxy ou CDN colocado na frente do SSR não pode cachear HTML nem reescrever o cabeçalho. Componente novo que precise de estilo dinâmico com valor não enumerável usa atributo ou geometria SVG; `style-src-attr 'unsafe-inline'` só entra com decisão registrada (BRAIN-009). Esta é a camada acima do ADR-28, não um substituto dele.
+
+## ADR-31 — Resolução de usuário opcional dos endpoints públicos em um único serviço
+
+### Contexto
+`CatalogController::currentUser()` e `SearchController::currentUser()` continham a mesma lógica de resolução de usuário opcional, byte a byte (486 caracteres normalizados), usada oito vezes no catálogo e uma na busca (F-013). Os endpoints públicos de descoberta precisam ser legíveis anonimamente, mas uma requisição com aparência de autenticada e token inválido não pode ser promovida ao escopo público (ADR-23). Duas cópias da mesma regra de escopo são um ponto de divergência futura: corrigir uma e esquecer a outra abriria o catálogo público para quem mandou um token inválido.
+
+### Decisão
+Extrair a lógica, sem nenhuma alteração de comportamento, para `App\Services\Auth\OptionalBearerUserResolver`, injetado por construtor nos dois controllers, e remover os dois métodos privados. O serviço é uma função pura de `Request`, sem estado, e o contrato caracterizado é:
+
+- usuário já autenticado pelo guard → o próprio usuário;
+- bearer não vazio resolvido por `PersonalAccessToken::findToken` → dono do token;
+- bearer não vazio que não resolve (inválido, revogado) → `new User` não persistido, que `DiscoveryAccess` traduz em escopo vazio, nunca o público;
+- ausência de bearer — sem cabeçalho, cabeçalho de outro esquema como `Basic`, ou `Bearer` vazio → `null`, escopo público anônimo.
+
+O comportamento foi fixado por `backend/tests/Feature/OptionalBearerUserResolutionTest.php` antes da extração, em commit próprio, e a mesma suíte, sem uma linha alterada, passou depois dela.
+
+### Consequências
+A regra de escopo dos endpoints públicos passa a ter um único ponto de manutenção, e qualquer mudança futura nela é necessariamente uma mudança deliberada de contrato, coberta por teste. Duas divergências entre o texto da F-013 e o código real ficam registradas como comportamento vigente, não corrigidas aqui para não misturar mudança funcional a um refactor:
+
+1. `Authorization: Basic ...` e `Bearer` vazio caem no escopo público, e não no escopo vazio. O guard clause devolve `null` assim que `bearerToken()` é nulo ou vazio, então o escopo vazio só existe para bearer não vazio que falha ao resolver.
+2. `findToken` não verifica `expires_at`, e `config('sanctum.expiration')` é `null`. Um token expirado continua aceito como seu dono nestes endpoints públicos, porque eles resolvem o token fora do guard `auth:sanctum`. Os endpoints privados não são afetados: ali quem valida é o guard. A lacuna é pré-existente, está travada por teste nomeado como tal e documentada no docblock do serviço; fechá-la é tarefa própria, com decisão registrada, porque muda resposta de endpoint.
