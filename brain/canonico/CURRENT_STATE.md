@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-09-20
+Updated: 2026-09-23
 
 ## Product Status
 
@@ -23,7 +23,7 @@ The product is positioned as a documentation discovery platform for plugin ecosy
 - Scheduled sync command for latest plugin versions.
 - Reverb private channels by community for ingestion status and command index updates.
 - Angular SSR shell with lazy standalone routes, Signals-based UI state, Transloco i18n, command palette, protected routes, and reusable UI components.
-- Browser/SSR runtime configuration separates internal SSR API calls from public browser API, Reverb, allowed hosts, and canonical public origin.
+- Browser/SSR runtime configuration separates internal SSR API calls from public browser API, Reverb, allowed hosts, and canonical public origin. Proven in the production stack: the hydrated browser calls only the configured public origin, `publicUrlFor()` in `frontend/src/server.ts` builds canonical and metadata from `COMMANDSPHERE_PUBLIC_ORIGIN` and ignores the request `Host`, and the browser websocket reaches the configured public Reverb host even though the `frontend` service still pins `COMMANDSPHERE_REVERB_HOST: localhost`.
 - Markdown viewer sanitization and heading/code enhancement.
 - Server-side HTML sanitization of `content_html` in two layers: allowlist sanitizer applied at ingestion and again through a `Document` accessor on every read, so stored documents are served sanitized without rewriting the column.
 - SEO metadata, canonical URLs, Open Graph, JSON-LD, robots, sitemap, and portfolio screenshots, with SSR post-processing normalizing public origin metadata.
@@ -100,6 +100,14 @@ Important implementation anchors:
 Documented evidence in `README.md` and `docs/PROGRESS.md` says v1 has passed phase validations across Pest, Pint, TypeScript, Jest, SSR build, Playwright, Docker, Meilisearch, Reverb, Horizon, and production-like Docker smoke checks.
 
 Current Brain bootstrap did not rerun the full product gate set because this change only adds documentation. Future product changes must run relevant gates and record `VALIDATED` versus `PENDING`.
+
+## Production Stack Facts
+
+Confirmed on 2026-09-23 by running `docker-compose.prod.yml` with public values that differ from the defaults, twice and independently. Details in `brain/handoffs/2026-09-23-production-hydrated-smoke.md`.
+
+- Seeding does not work in the production image. `fakerphp/faker` sits in `require-dev` in `backend/composer.json` while `docker/backend.prod.Dockerfile` installs with `composer install --no-dev`, so any factory calling `fake()` raises `Call to undefined function Database\Factories\fake()`. Migrations and Scout index sync work normally.
+- No `Content-Security-Policy` header is served by SSR, by `/runtime-config.js`, or by the API. A clean browser console proves the absence of a policy, not compliance with one.
+- The API answers `Access-Control-Allow-Origin: *`, the Laravel default with `config/cors.php` unpublished, so a cross-origin public frontend is not blocked and no origin is restricted either.
 
 ## Known Constraints
 
