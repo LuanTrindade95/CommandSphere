@@ -299,7 +299,7 @@ Risks:
 - Decide whether `X-Request-Id` must appear on API responses for requests that match no route. `AssignCorrelationId` lives in the `api` middleware group, so 404 and 405 responses for unrouted paths carry no correlation ID, while the global `SecurityHeaders` still applies.
 - On Windows worktrees, Jest loads `frontend/e2e/*.spec.ts` despite `testPathIgnorePatterns: ['<rootDir>/e2e/']` and reports 2 failed suites with 0 failed tests.
 - Fix the two `runtime-config.spec.ts` Jest failures caused by Docker Compose environment variables leaking into the test `process.env`.
-- Decide F-015: public discovery endpoints accept an expired bearer token as its owner, because they resolve it through `PersonalAccessToken::findToken` outside the `auth:sanctum` guard and `sanctum.expiration` is null. Closing it changes endpoint responses, so it needs its own branch, its own decision record, and an update to the characterization test that currently locks the behavior.
+- Decide whether Sanctum tokens should expire at all. `sanctum.expiration` is null, so a token issued without an explicit `expires_at` never lapses, on public and private endpoints alike. ADR-32 closed the narrower F-015 (an expired token no longer widens the public scope) but deliberately left this product question open, because setting a lifetime changes login and session behavior everywhere.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.
 - Export command/document references.

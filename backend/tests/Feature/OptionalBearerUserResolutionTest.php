@@ -9,7 +9,6 @@ use App\Models\PluginVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Laravel\Sanctum\PersonalAccessToken;
 use Meilisearch\Client;
 use Meilisearch\Exceptions\ApiException;
 
@@ -392,22 +391,77 @@ it('resolves search results to the same scope before the refactor', function ():
     }
 });
 
-it('accepts an expired bearer token as its owner on public discovery endpoints (pre-existing gap, not fixed here)', function (): void {
+it('rejects an expired bearer token, falling back to empty scope on public discovery endpoints (F-015)', function (): void {
     $graph = bearerResolutionGraph();
 
-    // findToken() from laravel/sanctum only hashes and looks up the token
-    // row; it does not check `expires_at`. That check lives in
-    // Laravel\Sanctum\Guard, which only runs behind the `auth:sanctum`
-    // middleware. CatalogController/SearchController::currentUser() call
-    // PersonalAccessToken::findToken() directly, bypassing that guard, so
-    // an expired token is currently still resolved to its owner here.
+    // OptionalBearerUserResolver now checks expires_at itself: findToken()
+    // from laravel/sanctum only hashes and looks up the token row, and the
+    // guard-level expiry check in Laravel\Sanctum\Guard never runs here
+    // because CatalogController/SearchController::currentUser() resolve
+    // outside the auth:sanctum middleware. An expired token is treated like
+    // any other bearer that fails to resolve: empty scope, never the
+    // token owner's scope and never the anonymous public scope.
     $expiredToken = $graph['member']->createToken('expired', ['*'], now()->subDay())->plainTextToken;
 
     $this->withHeaders(['Authorization' => 'Bearer '.$expiredToken])
         ->getJson('/api/v1/plugins/'.$graph['plugin']->slug)
-        ->assertOk();
+        ->assertNotFound();
 
     $this->withHeaders(['Authorization' => 'Bearer '.$expiredToken])
         ->getJson('/api/v1/plugins/'.$graph['foreignPlugin']->slug)
         ->assertNotFound();
+});
+
+it('rejects a bearer token that expired only seconds ago', function (): void {
+    $graph = bearerResolutionGraph();
+
+    $justExpiredToken = $graph['member']->createToken('just-expired', ['*'], now()->subSeconds(5))->plainTextToken;
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$justExpiredToken])
+        ->getJson('/api/v1/plugins/'.$graph['plugin']->slug)
+        ->assertNotFound();
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$justExpiredToken])
+        ->getJson('/api/v1/plugins/'.$graph['foreignPlugin']->slug)
+        ->assertNotFound();
+});
+
+it('still accepts a bearer token with no expires_at as its owner', function (): void {
+    $graph = bearerResolutionGraph();
+
+    $neverExpiresToken = $graph['member']->createToken('no-expiry')->plainTextToken;
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$neverExpiresToken])
+        ->getJson('/api/v1/plugins/'.$graph['plugin']->slug)
+        ->assertOk();
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$neverExpiresToken])
+        ->getJson('/api/v1/plugins/'.$graph['foreignPlugin']->slug)
+        ->assertNotFound();
+});
+
+it('leaves the other 7 header cases identical after the expired-token fix', function (): void {
+    $graph = bearerResolutionGraph();
+
+    foreach (bearerCases($graph) as $label => $case) {
+        $ownResponse = $this->withHeaders($case['headers'])
+            ->getJson('/api/v1/plugins/'.$graph['plugin']->slug);
+        $foreignResponse = $this->withHeaders($case['headers'])
+            ->getJson('/api/v1/plugins/'.$graph['foreignPlugin']->slug);
+
+        match ($case['group']) {
+            'public' => [
+                $ownResponse->assertOk(),
+                $foreignResponse->assertOk(),
+            ],
+            'member' => [
+                $ownResponse->assertOk(),
+                $foreignResponse->assertNotFound(),
+            ],
+            'empty' => [
+                $ownResponse->assertNotFound(),
+                $foreignResponse->assertNotFound(),
+            ],
+        };
+    }
 });

@@ -396,3 +396,22 @@ A regra de escopo dos endpoints públicos passa a ter um único ponto de manuten
 
 1. `Authorization: Basic ...` e `Bearer` vazio caem no escopo público, e não no escopo vazio. O guard clause devolve `null` assim que `bearerToken()` é nulo ou vazio, então o escopo vazio só existe para bearer não vazio que falha ao resolver.
 2. `findToken` não verifica `expires_at`, e `config('sanctum.expiration')` é `null`. Um token expirado continua aceito como seu dono nestes endpoints públicos, porque eles resolvem o token fora do guard `auth:sanctum`. Os endpoints privados não são afetados: ali quem valida é o guard. A lacuna é pré-existente, está travada por teste nomeado como tal e documentada no docblock do serviço; fechá-la é tarefa própria, com decisão registrada, porque muda resposta de endpoint.
+
+## ADR-32 — Token expirado falha fechado nos endpoints públicos de descoberta
+
+### Contexto
+Os endpoints públicos de catálogo e busca resolvem o bearer opcional por `PersonalAccessToken::findToken()`, fora do guard `auth:sanctum` (ADR-31). Esse método faz apenas hash e lookup: a verificação de validade temporal vive em `Laravel\Sanctum\Guard`, que só roda atrás do guard. Como `config('sanctum.expiration')` é nulo, nada mais compensava a ausência dessa checagem, e um token com `expires_at` no passado continuava valendo como seu dono nesses endpoints (F-015). O efeito era anular a expiração como mecanismo de revogação justamente na superfície que não passa pelo guard. A lacuna foi encontrada ao caracterizar a F-013 e deixada registrada de propósito, para não misturar mudança funcional a um refactor.
+
+### Decisão
+Rejeitar o token expirado dentro do próprio resolver, entre o `findToken()` e a checagem do `tokenable`: um token resolvido cujo `expires_at` já passou devolve `new User` não persistido, o mesmo escopo vazio de qualquer bearer não vazio que não resolve. Nunca o escopo público, porque a requisição tem credencial e não pode ser promovida a anônima (ADR-23).
+
+Um token sem `expires_at` continua válido, sem alteração: a checagem é estritamente sobre uma data já vencida.
+
+`config('sanctum.expiration')` permanece nulo, por decisão explícita. Defini-lo faria todo token passar a vencer, inclusive nos endpoints privados via guard, o que muda login e sessão — é questão de produto, com tarefa e decisão próprias, e segue na fila.
+
+### Consequências
+A expiração volta a valer como revogação em toda a superfície pública: um token vencido deixa de ver o catálogo do seu dono e passa a não ver nada, em vez de cair no escopo público. Endpoints privados não mudam, porque ali quem valida continua sendo o guard.
+
+O caso de caracterização que travava o comportamento antigo foi invertido no mesmo commit da correção, com asserção mais discriminante: `404` no plugin do próprio dono distingue escopo vazio tanto de dono (`200`) quanto de público (`200`), o que uma asserção de `200` não faria. A auditoria independente confirmou que os dez casos anteriores continuam passando contra o resolver da `main`, e que os dois casos novos falham contra ele — ou seja, o teste morde a mudança em vez de apenas acompanhá-la.
+
+Com `sanctum.expiration` nulo, a proteção só alcança tokens que receberam `expires_at` explícito. Enquanto essa decisão de produto não for tomada, a maioria dos tokens emitidos não vence, e este ADR não deve ser lido como se tokens caducassem sozinhos.
