@@ -18,6 +18,8 @@ Remediation update: F-006 was addressed in branch `fix/github-client-fail-closed
 
 Remediation update: F-008 was addressed in branch `fix/security-content-policy`. The SSR sends an enforced CSP on every HTML response, prerendered documents included, with a per-request `style-src` nonce, no `unsafe-inline` or `unsafe-eval`, and `connect-src` built from the same runtime configuration served at `/runtime-config.js`. The API sends `default-src 'none'` on every response, error responses included. Policy and trade-offs are recorded in ADR-30.
 
+Remediation update: F-013 was addressed in branch `refactor/optional-bearer-user-resolver`. The duplicated `currentUser()` was extracted, unchanged, into `App\Services\Auth\OptionalBearerUserResolver`, with characterization tests committed before the extraction and passing unmodified after it (ADR-31). Characterizing the real behavior contradicted this finding's own description on two points, both left uncorrected and recorded: a non-bearer `Authorization` header and an empty `Bearer` value resolve to the public scope rather than the empty scope, and an expired token is still accepted as its owner, now tracked as F-015.
+
 ## Executive Summary
 
 CommandSphere already has a stronger baseline than a typical portfolio project: scoped permissions, HMAC webhooks, private realtime channels, Markdown sanitization in the Angular viewer, rate limits on key public/operational endpoints, idempotent ingestion tests, and documented architecture decisions.
@@ -367,6 +369,8 @@ Priority:
 
 Refactor opportunistically.
 
+Status: Closed by ADR-31. The description above is imprecise about the empty-scope branch; see F-015 and the remediation note at the top of this file.
+
 ### F-014 - Audit Tooling Finds High Vulnerabilities In Frontend Toolchain
 
 Severity: Low-Medium for runtime, Medium for developer/CI environment
@@ -389,6 +393,32 @@ Recommended fix:
 Priority:
 
 Monitor now; upgrade when compatible.
+
+### F-015 - Public Discovery Endpoints Accept An Expired Bearer Token
+
+Severity: Medium
+
+Found on 2026-09-23 while characterizing F-013. Pre-existing, not introduced by that refactor.
+
+Evidence:
+
+- `App\Services\Auth\OptionalBearerUserResolver` resolves the token through `PersonalAccessToken::findToken()`, outside the `auth:sanctum` guard.
+- Sanctum's `findToken()` has no `expires_at` check, and `config('sanctum.expiration')` is null.
+- `backend/tests/Feature/OptionalBearerUserResolutionTest.php` locks the behavior in a case named as a pre-existing gap: a token whose `expires_at` is in the past still returns its owner's scope on the public catalog and search endpoints.
+
+Impact:
+
+A token the user believes has lapsed keeps granting that user's community scope on public discovery endpoints. Private and mutating endpoints are unaffected, because there the guard validates expiry. The exposure is read-only and limited to the token owner's own scope, so it is not privilege escalation, but it does defeat token expiry as a revocation mechanism.
+
+Recommended fix:
+
+- Reject an expired token in the resolver, treating it like any other unresolvable non-empty bearer: empty scope, never public.
+- Decide whether `sanctum.expiration` should be set at all, since a null value means tokens without an explicit `expires_at` never lapse.
+- Update the characterization case in the same change; it currently asserts the wrong behavior on purpose.
+
+Priority:
+
+Own branch with a recorded decision, because it changes endpoint responses.
 
 ## Positive Controls Observed
 

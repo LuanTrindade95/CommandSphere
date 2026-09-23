@@ -375,3 +375,24 @@ Nem a API Laravel nem o SSR Node enviavam `Content-Security-Policy` (F-008). O a
 
 ### Consequências
 A política não tem `unsafe-inline` nem `unsafe-eval`, e não há curinga em `script-src` nem em `connect-src`. `img-src https:` é a única abertura, deliberada, para não quebrar as imagens da documentação ingerida; o custo é expor o acesso a hosts de imagem arbitrários, atenuado pelo `Referrer-Policy`. Um proxy ou CDN colocado na frente do SSR não pode cachear HTML nem reescrever o cabeçalho. Componente novo que precise de estilo dinâmico com valor não enumerável usa atributo ou geometria SVG; `style-src-attr 'unsafe-inline'` só entra com decisão registrada (BRAIN-009). Esta é a camada acima do ADR-28, não um substituto dele.
+
+## ADR-31 — Resolução de usuário opcional dos endpoints públicos em um único serviço
+
+### Contexto
+`CatalogController::currentUser()` e `SearchController::currentUser()` continham a mesma lógica de resolução de usuário opcional, byte a byte (486 caracteres normalizados), usada oito vezes no catálogo e uma na busca (F-013). Os endpoints públicos de descoberta precisam ser legíveis anonimamente, mas uma requisição com aparência de autenticada e token inválido não pode ser promovida ao escopo público (ADR-23). Duas cópias da mesma regra de escopo são um ponto de divergência futura: corrigir uma e esquecer a outra abriria o catálogo público para quem mandou um token inválido.
+
+### Decisão
+Extrair a lógica, sem nenhuma alteração de comportamento, para `App\Services\Auth\OptionalBearerUserResolver`, injetado por construtor nos dois controllers, e remover os dois métodos privados. O serviço é uma função pura de `Request`, sem estado, e o contrato caracterizado é:
+
+- usuário já autenticado pelo guard → o próprio usuário;
+- bearer não vazio resolvido por `PersonalAccessToken::findToken` → dono do token;
+- bearer não vazio que não resolve (inválido, revogado) → `new User` não persistido, que `DiscoveryAccess` traduz em escopo vazio, nunca o público;
+- ausência de bearer — sem cabeçalho, cabeçalho de outro esquema como `Basic`, ou `Bearer` vazio → `null`, escopo público anônimo.
+
+O comportamento foi fixado por `backend/tests/Feature/OptionalBearerUserResolutionTest.php` antes da extração, em commit próprio, e a mesma suíte, sem uma linha alterada, passou depois dela.
+
+### Consequências
+A regra de escopo dos endpoints públicos passa a ter um único ponto de manutenção, e qualquer mudança futura nela é necessariamente uma mudança deliberada de contrato, coberta por teste. Duas divergências entre o texto da F-013 e o código real ficam registradas como comportamento vigente, não corrigidas aqui para não misturar mudança funcional a um refactor:
+
+1. `Authorization: Basic ...` e `Bearer` vazio caem no escopo público, e não no escopo vazio. O guard clause devolve `null` assim que `bearerToken()` é nulo ou vazio, então o escopo vazio só existe para bearer não vazio que falha ao resolver.
+2. `findToken` não verifica `expires_at`, e `config('sanctum.expiration')` é `null`. Um token expirado continua aceito como seu dono nestes endpoints públicos, porque eles resolvem o token fora do guard `auth:sanctum`. Os endpoints privados não são afetados: ali quem valida é o guard. A lacuna é pré-existente, está travada por teste nomeado como tal e documentada no docblock do serviço; fechá-la é tarefa própria, com decisão registrada, porque muda resposta de endpoint.

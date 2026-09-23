@@ -110,3 +110,14 @@ Consequences:
 - A branch is rebased onto `origin/main` before publishing, and the gates run again on the rebased base. Approval granted on an earlier base does not carry over on its own: confirm that the change's own diff is unchanged and that the new base did not break it.
 - Before opening or merging a pull request, `git fetch` again. A rebase that was current an hour ago may not be.
 - When an edit to `brain/` or `docs/` is the closing step, re-read the file on the current base. Another session may have added a section where one is about to be written.
+
+## BRAIN-011 - A Scope Rule Has One Implementation, And A Refactor Proves It By Characterization First
+
+Decision: The rule that decides which scope a request gets exists once. When the same rule is found duplicated, the extraction is a pure move: characterization tests are written and committed against the unmodified code first, and the same tests, unchanged, must pass after the extraction. A behavior the refactor discovers to be wrong is reported and locked as-is, never corrected inside the same change. See ADR-31.
+
+Consequences:
+
+- The test commit comes before the refactor commit, so the tests cannot be retrofitted to the new behavior. An auditor verifies the order with `git log` and the test blob being byte-identical across both commits.
+- Equivalence is argued from the extracted body being character-identical to the original and the call sites being one-to-one substitutions, not from the tests alone.
+- A gap found while characterizing becomes a finding with a test that names it as pre-existing, plus a queue entry. Silently fixing it inside a refactor destroys the evidence that responses did not change.
+- What the audit item says a piece of code does is a claim, not the contract. The contract is what the code does, read from the source before the tests are written.

@@ -1,6 +1,6 @@
 # Next Actions
 
-Updated: 2026-09-21
+Updated: 2026-09-23
 
 This roadmap is intentionally product-oriented. New work should strengthen portfolio signal, production realism, and architecture maturity rather than adding generic CRUD.
 
@@ -276,7 +276,7 @@ Risks:
 - Decide whether `X-Request-Id` must appear on API responses for requests that match no route. `AssignCorrelationId` lives in the `api` middleware group, so 404 and 405 responses for unrouted paths carry no correlation ID, while the global `SecurityHeaders` still applies.
 - On Windows worktrees, Jest loads `frontend/e2e/*.spec.ts` despite `testPathIgnorePatterns: ['<rootDir>/e2e/']` and reports 2 failed suites with 0 failed tests.
 - Fix the two `runtime-config.spec.ts` Jest failures caused by Docker Compose environment variables leaking into the test `process.env`.
-- Extract optional bearer-token user resolution shared by public discovery controllers.
+- Decide F-015: public discovery endpoints accept an expired bearer token as its owner, because they resolve it through `PersonalAccessToken::findToken` outside the `auth:sanctum` guard and `sanctum.expiration` is null. Closing it changes endpoint responses, so it needs its own branch, its own decision record, and an update to the characterization test that currently locks the behavior.
 - Keyboard-first power-user UX for command palette actions.
 - Saved searches and team-level curated collections.
 - Export command/document references.
